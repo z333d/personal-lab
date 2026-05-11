@@ -1,0 +1,20 @@
+{
+  "name": "@lab/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=esm --outfile=../dist/server/index.js --external:cloudflare:workers --target=es2022 --conditions=workerd",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@lab/lib": "workspace:*",
+    "hono": "^4.12.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251201.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}

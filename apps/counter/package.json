@@ -1,0 +1,35 @@
+{
+  "name": "@lab/counter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "theme:gen": "node scripts/gen-theme.mjs",
+    "build": "pnpm theme:gen && vite build",
+    "dev": "pnpm theme:gen && vite"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.488.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^2.5.0"
+  },
+  "devDependencies": {
+    "@google/design.md": "^0.1.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  },
+  "lab": {
+    "title": "Counter",
+    "description": "A minimal static React app — useState + localStorage. No backend.",
+    "framework": "vite-react"
+  }
+}

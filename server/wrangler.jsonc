@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "__LAB_NAME__",
+  "main": "../dist/server/index.js",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "vars": {
+    "LAB_NAME": "__LAB_NAME__"
+    // LAB_MANIFEST is injected at build time by scripts/build-lab.mjs
+  },
+  // Route bindings are injected by create-lab.mjs once the lab's custom
+  // domain (or workers.dev fallback) is known. The placeholder below is a
+  // no-op JSON marker until then.
+  "routes": "__LAB_ROOT_ROUTES__",
+  "observability": {
+    "enabled": true
+  }
+  // Note: this file is the template. build-lab.mjs may inject additional vars
+  // (LAB_MANIFEST) and never overwrites your manual edits unless they're
+  // marked with a "// MANUAL:" comment.
+}
