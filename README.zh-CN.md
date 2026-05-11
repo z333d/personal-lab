@@ -50,7 +50,7 @@ node scripts/create-lab.mjs <lab-name>   # 一条命令搞定全部：
 - **[AGENTS.md](./AGENTS.md)** — 给任何在生成的 lab 里干活的 AI agent（或人）看的操作手册：约定、品牌流程、已知陷阱、故障排除。同时被 symlink 成 `CLAUDE.md` 供 Claude Code 自动加载。
 - **[HANDOFF.md](./HANDOFF.md)** — 给"继续维护这个模板仓库本身"的人看的交接文档：当前进度、未完成事项、已知陷阱、状态存放在哪里。
 - **[GRADUATION.md](./GRADUATION.md)** — 当某个 lab 应用长大到需要独立成仓库时怎么搬出去。
-- **[`design-samples/`](./design-samples/)** — 三个参考 DESIGN.md 变体（Notebook、Terminal、Postcard），给 agent + 用户在选品牌时一些具体的方向。
+- **[design-patterns.md](./design-patterns.md)** — 一份共享的审美词汇表（7 个命名的风格 register，从 Essay 到 Manifesto），agent 和用户在为新应用挑风格时有共同的指向语言。
 
 ---
 

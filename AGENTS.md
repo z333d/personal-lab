@@ -179,10 +179,11 @@ Each app under `apps/<slug>/` carries its own brand via `apps/<slug>/DESIGN.md`.
 
 ### Workflow when building or significantly changing UI
 
-1. **Ask first** — before writing components or CSS for a new app (or a major redesign of an existing one), confirm with the user:
-   - **What does this app do?** (one sentence)
-   - **What vibe / register?** Editorial · playful · utilitarian · documentation · dark mode native · maximalist · minimalist · brutalist · pastel · industrial · etc. Offer 2–3 candidates if the user hasn't said.
-2. **Rewrite `apps/<slug>/DESIGN.md`** to match — colors (with hint of chroma, never pure gray), typography, radii, plus a Markdown paragraph explaining *why this brand for this product*.
+1. **Ask first** — before writing components or CSS for a new app (or a major redesign of an existing one):
+   - Confirm **what the app does** (one sentence).
+   - Consult [`design-patterns.md`](./design-patterns.md) for the shared aesthetic vocabulary (seven named patterns: Essay · Sketchnote · Postcard · Notebook · Terminal · Manifesto · Neo-Memphis Playful), short-list the 2–3 that fit, and have the user pick one — or invoke `/design-shotgun` to generate visual variants and let them choose by sight.
+   - Do **not** default to "soft minimal SaaS" — that's the AI baseline `design-patterns.md` exists to push away from.
+2. **Rewrite `apps/<slug>/DESIGN.md`** to match the chosen pattern's visual fingerprint — colors (with hint of chroma, never pure gray), typography, radii, plus a Markdown paragraph naming the pattern and explaining *why this brand for this product*. Deviations from the pattern's defaults should be conscious and noted.
 3. **Run `pnpm --filter @lab/<slug> theme:gen`** to regenerate `theme.generated.css`.
 4. **Build components** that consume brand tokens (`bg-accent`, `text-fg`, `border-border`, etc.) — never hard-code colors in JSX.
 5. When done, run a quick `/impeccable critique` against the result if the surface is more than throwaway.

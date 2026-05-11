@@ -50,7 +50,7 @@ Inside a generated lab, `pnpm scaffold page|app <slug> [--fullstack]` adds new c
 - **[AGENTS.md](./AGENTS.md)** — operating manual for any AI agent (or human) working *inside* a generated lab. Conventions, brand workflow, traps, troubleshooting. Symlinked as `CLAUDE.md` for Claude Code.
 - **[HANDOFF.md](./HANDOFF.md)** — catch-up doc for continuing work *on this template repo itself*. Current status, pending items, known traps, where state lives.
 - **[GRADUATION.md](./GRADUATION.md)** — how to extract a lab app into its own repo when it outgrows the lab.
-- **[`design-samples/`](./design-samples/)** — three reference DESIGN.md variants (Notebook, Terminal, Postcard) to give the agent + user concrete options when picking a brand.
+- **[design-patterns.md](./design-patterns.md)** — a shared aesthetic vocabulary (seven named registers from Essay to Manifesto) for the agent and user to point at when picking a brand for a new app.
 
 ---
 
