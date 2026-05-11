@@ -24,24 +24,93 @@ Stack per fullstack app: Vite + React 19, Hono on Workers, Drizzle on D1, Better
 
 ## Bootstrapping a new lab
 
+One-time setup on a fresh machine:
+
 ```bash
 git clone git@github.com:z333d/create-pages-site-template.git
 cd create-pages-site-template
 pnpm install
-npx wrangler login                       # interactive
-node scripts/setup.mjs                   # one-time per-user config
+npx wrangler login                       # interactive browser flow
+node scripts/setup.mjs                   # writes ~/.config/create-pages-site/config.json
+```
 
+Then create your lab (takes ~2 minutes end-to-end):
+
+```bash
 node scripts/create-lab.mjs <lab-name>   # all-in-one:
-#   • copies template → ../<lab-name>/
+#   • copies template → <projects-dir>/<lab-name>/
 #   • creates the GitHub repo + first commit + push
 #   • creates per-app D1 + runs migrations
 #   • deploys every Worker + sets BETTER_AUTH_SECRET / BETTER_AUTH_URL
 #   • prints the live URL
 ```
 
-Optional flags: `--no-deploy` (skip Cloudflare), `--no-domain` (use *.workers.dev), `--domain my.example.com`, `--keep-on-fail` (don't roll back on errors), `--org <github-owner>`.
+Flags: `--no-deploy` (skip Cloudflare), `--no-domain` (use *.workers.dev), `--domain my.example.com`, `--keep-on-fail` (don't roll back on errors), `--org <github-owner>`.
 
-Inside a generated lab, `pnpm scaffold page|app <slug> [--fullstack]` adds new content. `pnpm build && pnpm deploy:all` redeploys everything.
+---
+
+## Day-to-day usage
+
+You're now in `<projects-dir>/<lab-name>/` with a live deployment. Adding content is local then `git push` (or `pnpm deploy:*`).
+
+**Add an HTML page** — ~30 seconds
+
+```bash
+pnpm scaffold page <slug>
+# edit pages/<slug>.html — single file, inline <style> and <script>, no build step
+pnpm deploy:root
+# live at /pages/<slug>.html (and /<slug>.html)
+```
+
+**Add a static React app** — ~2 minutes
+
+```bash
+pnpm scaffold app <slug>
+# writes apps/<slug>/ with a neutral DESIGN.md + App.tsx placeholder
+# before building UI, pick a register from design-patterns.md, rewrite
+# DESIGN.md, then `pnpm theme:gen` and edit src/App.tsx
+pnpm build && pnpm deploy:root
+# live at /apps/<slug>/
+```
+
+**Add a full-stack app** — ~10 minutes (the one path that needs manual Cloudflare steps)
+
+```bash
+pnpm scaffold app <slug> --fullstack
+
+# 1. provision D1
+npx wrangler d1 create <lab-name>-<slug>
+# paste the returned database_id into apps/<slug>/wrangler.jsonc
+
+# 2. apply the auth-only initial migration
+cd apps/<slug>
+npx wrangler d1 execute <lab-name>-<slug> --remote --file drizzle/migrations/0000_init.sql
+
+# 3. set the two secrets
+echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
+echo -n "https://<lab-name>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL
+
+# 4. deploy
+cd ../..
+pnpm build && pnpm deploy:all
+# live at /apps/<slug>/
+```
+
+**Local development**
+
+```bash
+pnpm dev                          # everything: root Worker + every fullstack app
+pnpm --filter @lab/<slug> dev     # just one app
+```
+
+**Re-deploy**
+
+```bash
+pnpm deploy:root                  # root Worker only (pages + static apps + landing)
+pnpm deploy:all                   # everything (root + each fullstack Worker)
+```
+
+`design-patterns.md` is the shared aesthetic vocabulary — consult it before writing UI for a new app so you (or your agent) don't default to the bland AI-SaaS look.
 
 ---
 
@@ -54,14 +123,13 @@ Inside a generated lab, `pnpm scaffold page|app <slug> [--fullstack]` adds new c
 
 ---
 
-## Showcase
+## Built-in examples
 
-The two apps under `apps/` are deliberate examples of what's possible, not the official lab style:
+- **`apps/todo/`** — fullstack app, Notebook register (warm cream, serif, quiet personal tool).
+- **`apps/counter/`** — static app, Terminal register (monospace, dark, dense).
+- **`pages/welcome.html`** — sample HTML page.
 
-- **`apps/todo/`** — Notebook theme, fullstack (Hono + D1 + Better Auth).
-- **`apps/counter/`** — Terminal theme, static.
-
-Sibling apps' brands should never be inherited silently — each new app gets its own register via its own `DESIGN.md`. The auto-generated lab landing page is intentionally neutral (system fonts, no chroma) because the lab itself is the table of contents, not a brand.
+These are the working references both the agent and you can read when in doubt.
 
 ---
 

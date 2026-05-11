@@ -24,24 +24,93 @@
 
 ## 创建一个新 lab
 
+新机器一次性配置：
+
 ```bash
 git clone git@github.com:z333d/create-pages-site-template.git
 cd create-pages-site-template
 pnpm install
-npx wrangler login                       # 交互式登录
-node scripts/setup.mjs                   # 一次性配置（每个用户跑一次）
+npx wrangler login                       # 交互式浏览器登录
+node scripts/setup.mjs                   # 写 ~/.config/create-pages-site/config.json
+```
 
-node scripts/create-lab.mjs <lab-name>   # 一条命令搞定全部：
-#   • 把模板拷到 ../<lab-name>/
+然后创建你的 lab（端到端 ~2 分钟）：
+
+```bash
+node scripts/create-lab.mjs <lab-name>   # 一条命令搞定：
+#   • 把模板拷到 <projects-dir>/<lab-name>/
 #   • 建 GitHub 仓库 + 首次 commit + push
 #   • 为每个全栈 app 建 D1 + 跑迁移
 #   • 部署所有 Worker + 设置 BETTER_AUTH_SECRET / BETTER_AUTH_URL
 #   • 打印线上 URL
 ```
 
-可选 flag：`--no-deploy`（不动 Cloudflare）、`--no-domain`（用 *.workers.dev）、`--domain my.example.com`、`--keep-on-fail`（出错不回滚，便于排查）、`--org <github-owner>`。
+可选 flag：`--no-deploy`（不动 Cloudflare）、`--no-domain`（用 *.workers.dev）、`--domain my.example.com`、`--keep-on-fail`（出错不回滚便于排查）、`--org <github-owner>`。
 
-进入生成的 lab 后，用 `pnpm scaffold page|app <slug> [--fullstack]` 加内容。改完跑 `pnpm build && pnpm deploy:all` 重新部署。
+---
+
+## 日常使用
+
+lab 在 `<projects-dir>/<lab-name>/`，已经有真实部署。增加内容是本地改 + `git push`（或 `pnpm deploy:*`）。
+
+**加 HTML 页面** — ~30 秒
+
+```bash
+pnpm scaffold page <slug>
+# 编辑 pages/<slug>.html —— 单文件、内联 <style> 和 <script>，无构建步骤
+pnpm deploy:root
+# 上线在 /pages/<slug>.html（也支持 /<slug>.html）
+```
+
+**加静态 React 应用** — ~2 分钟
+
+```bash
+pnpm scaffold app <slug>
+# 在 apps/<slug>/ 写中性 DESIGN.md + App.tsx 占位
+# 写 UI 前，先从 design-patterns.md 选一个 register，重写 DESIGN.md，
+# 跑 `pnpm theme:gen`，然后改 src/App.tsx
+pnpm build && pnpm deploy:root
+# 上线在 /apps/<slug>/
+```
+
+**加全栈应用** — ~10 分钟（唯一一条需要手动跑 Cloudflare 步骤的路径）
+
+```bash
+pnpm scaffold app <slug> --fullstack
+
+# 1. 创建 D1
+npx wrangler d1 create <lab-name>-<slug>
+# 把返回的 database_id 粘进 apps/<slug>/wrangler.jsonc
+
+# 2. 应用 auth-only 的初始迁移
+cd apps/<slug>
+npx wrangler d1 execute <lab-name>-<slug> --remote --file drizzle/migrations/0000_init.sql
+
+# 3. 设两个 secrets
+echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
+echo -n "https://<lab-name>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL
+
+# 4. 部署
+cd ../..
+pnpm build && pnpm deploy:all
+# 上线在 /apps/<slug>/
+```
+
+**本地开发**
+
+```bash
+pnpm dev                          # 全部：root Worker + 每个全栈 app
+pnpm --filter @lab/<slug> dev     # 只跑一个 app
+```
+
+**重新部署**
+
+```bash
+pnpm deploy:root                  # 只重部 root Worker（页面 + 静态 app + landing）
+pnpm deploy:all                   # 全量（root + 每个全栈 Worker）
+```
+
+`design-patterns.md` 是 agent 和你共享的审美词汇表 —— 给新应用写 UI 前先翻一下，避免落入 AI 默认的"SaaS 极简"那种平庸。
 
 ---
 
@@ -56,12 +125,11 @@ node scripts/create-lab.mjs <lab-name>   # 一条命令搞定全部：
 
 ## 内置示范
 
-`apps/` 下的两个应用是"可能的样子"的示范，**不是**官方风格：
+- **`apps/todo/`** — 全栈应用，Notebook register（暖米色、衬线、安静的个人工具）
+- **`apps/counter/`** — 静态应用，Terminal register（等宽字体、深色、紧凑）
+- **`pages/welcome.html`** — 示范 HTML 页面
 
-- **`apps/todo/`** — Notebook 主题、全栈（Hono + D1 + Better Auth）
-- **`apps/counter/`** — Terminal 主题、静态
-
-兄弟应用的品牌**不应被默认继承** —— 每个新应用通过自己的 `DESIGN.md` 设定自己的调性。自动生成的 lab 首页刻意保持中性（系统字体、无彩度），因为 lab 本身只是个目录页，不是品牌。
+这是 agent 和你拿不准时可以直接看的工作样本。
 
 ---
 
