@@ -58,9 +58,15 @@ if (!fs.existsSync(CONFIG_PATH)) {
 const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 const githubOrg = opts.org || cfg.githubOrg;
 const projectsDir = cfg.projectsDir.replace(/^~/, os.homedir());
-const useCustomDomain = !flags.has('--no-domain') && !!cfg.defaultZone;
+const useCustomDomain = !flags.has('--no-domain') && (!!cfg.defaultZone || !!opts.domain);
 const customDomain = opts.domain || (useCustomDomain ? `${labName}.${cfg.defaultZone}` : null);
 const skipDeploy = flags.has('--no-deploy');
+// Cloudflare wants `zone_name` on each per-app route binding. If the user
+// passed --domain explicitly without a configured defaultZone, derive the
+// zone by dropping the lab's subdomain label (works for the common 2-label
+// public suffix case; users on .co.uk-style suffixes should set defaultZone
+// in their config or run setup.mjs to record it).
+const zoneName = cfg.defaultZone || (customDomain ? customDomain.split('.').slice(1).join('.') : null);
 
 const labDir = path.join(projectsDir, labName);
 const labRepoUrl = `github.com/${githubOrg}/${labName}`;
@@ -144,7 +150,7 @@ log(`  Found ${fullstackApps.length} fullstack app(s): ${fullstackApps.map(a => 
 for (const app of fullstackApps) {
   const placeholder = `"__APP_${app.slug.toUpperCase()}_ROUTES__"`;
   const routesJson = customDomain
-    ? JSON.stringify([{ pattern: `${customDomain}/apps/${app.slug}/*`, zone_name: cfg.defaultZone }])
+    ? JSON.stringify([{ pattern: `${customDomain}/apps/${app.slug}/*`, zone_name: zoneName }])
     : '[]';
   substituteInFile(path.join(app.dir, 'wrangler.jsonc'), placeholder, routesJson);
 }
