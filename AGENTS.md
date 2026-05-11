@@ -12,7 +12,10 @@ This document tells you how to operate inside this repo. Any AI coding agent —
 | Static React app | `apps/<slug>/` (no `db.ts`) | `/apps/<slug>/` | root Worker |
 | Full-stack app (login + DB) | `apps/<slug>/` (own `wrangler.jsonc` + framework) | `/apps/<slug>/*` | own Worker |
 
-All URLs sit under one lab domain (`https://<lab>.<your-domain>` or `https://<lab>.<account>.workers.dev`). Cloudflare Workers Routes do the path-prefix dispatching.
+All URLs sit under one lab domain (`https://<lab>.<your-domain>` or `https://<lab>.<account>.workers.dev`). Path-prefix dispatch happens two ways, transparently to apps:
+
+- **With a custom domain**, Cloudflare Workers Routes (declared in each fullstack app's `wrangler.jsonc`) intercept `<lab>/apps/<slug>/*` before the request hits the root Worker.
+- **Without** (on workers.dev), the root Worker uses **Service Bindings** to dispatch `/apps/<slug>/*` to the per-app Worker. `scripts/build-lab.mjs` injects these bindings into `server/wrangler.generated.jsonc` based on which fullstack apps it discovers, and the root Worker requires `assets.run_worker_first: true` so Worker code runs before the Static Assets SPA fallback (otherwise HTML navigations would 200 the lab landing for any unbound path).
 
 ## Decision: which kind do I build?
 
@@ -70,109 +73,85 @@ Edit `src/` like any Vite + React app. After `git push`, live at `/apps/<slug>/`
 ## Adding a full-stack app
 
 ```bash
-# Default: TanStack Start (rich DX, file routing, server functions)
 pnpm scaffold app <slug> --fullstack
-
-# Or pick a lighter framework
-pnpm scaffold app <slug> --fullstack --framework hono-vite
-pnpm scaffold app <slug> --fullstack --framework astro
 ```
 
-A full-stack app is a **complete child project** with its own framework, its own `wrangler.jsonc`, and its own Worker on deploy. The skill scaffolds the whole thing; the lab's build script wires it into the root Worker's path routing.
+A full-stack app is a **complete child project** with its own `wrangler.jsonc` and its own Worker on deploy. The scaffolder copies from `apps/todo/` (Hono + Vite + React) and neutralizes the brand + business code so you start from a clean auth-only template. Other frameworks (TanStack Start, Astro) are *not* wired in yet — only `hono-vite` works today.
+
+The lab's build script wires the new app into the root Worker's path routing via service bindings once you provision its D1 (see "Lifecycle" below).
 
 ```
 apps/<slug>/
-├── wrangler.jsonc       # this app's Worker config (binding to D1, secrets, etc.)
-├── package.json         # framework's standard package.json + "lab.fullstack": true
+├── wrangler.jsonc       # this app's Worker config (D1 binding, secrets)
+├── package.json         # standard package.json + "lab.fullstack": true
 ├── tsconfig.json
-└── (framework-specific)
-    ├── app/             # TanStack Start: file-based routes
-    │   ├── routes/      #   - index.tsx, login.tsx, etc.
-    │   └── server/      #   - server functions, helpers
-    ├── src/             # Or Hono+Vite: traditional layout
-    │   ├── client/
-    │   ├── server/      #   - api.ts: Hono router
-    │   └── shared/      #   - schema.ts: Drizzle schema
-    └── …
-```
-
-After `git push` the build script automatically:
-
-1. Creates a D1 database named `<lab>-<slug>` if it doesn't exist.
-2. Runs Drizzle migrations against it (auth tables + business tables).
-3. Runs `wrangler deploy` for this app's Worker.
-4. Adds a Cloudflare Workers Route so `<lab-domain>/apps/<slug>/*` reaches this Worker.
-5. Wires Better Auth with a per-app secret + cookie path scoped to `/apps/<slug>/`.
-6. Pre-creates the lab owner's account on first deploy (using the email stored in lab config).
-
-You never touch `wrangler.jsonc`, secrets, DNS, or migrations directly.
-
-### TanStack Start app conventions
-
-If you scaffolded with `--framework tanstack-start` (the default):
-
-```
-apps/<slug>/
-├── app/
-│   ├── routes/
-│   │   ├── __root.tsx   # global layout, providers
-│   │   ├── index.tsx    # landing page
-│   │   └── api/
-│   │       └── auth/
-│   │           └── $.tsx  # Better Auth handler (auto-mounted)
-│   ├── server/
-│   │   └── auth.ts      # createAppAuth() — calls @lab/lib helper
-│   └── lib/
-│       └── auth-client.ts  # Better Auth React client
+├── drizzle/
+│   └── migrations/      # auth-only 0000_init.sql out of the box
 ├── shared/
 │   └── schema.ts        # Drizzle schema; export `schema`
-└── wrangler.jsonc
+└── src/
+    ├── client/          # Vite + React SPA (main.tsx, App.tsx)
+    └── server/          # Hono router (mounts /apps/<slug>/api/*)
 ```
 
-- Add new pages by creating files in `app/routes/`.
-- Add new API endpoints as TanStack Start server functions OR as routes under `app/routes/api/`.
-- For DB queries, import the schema and use `getDb(env, schema)` from `@lab/lib`.
+### Lifecycle for a brand-new fullstack app
 
-### Hono + Vite app conventions (lightweight alternative)
+`pnpm scaffold app <slug> --fullstack` writes the folder + pnpm-installs, but does **not** touch Cloudflare. Before the new app can be reached, you (or the agent) must:
 
-If you scaffolded with `--framework hono-vite`:
+```bash
+# 1. provision its D1 (the scaffold leaves a __D1_<SLUG>_ID__ placeholder)
+npx wrangler d1 create <lab>-<slug>
+#    → paste the returned database_id into apps/<slug>/wrangler.jsonc
 
+# 2. apply the auth-only initial migration
+cd apps/<slug>
+npx wrangler d1 execute <lab>-<slug> --remote --file drizzle/migrations/0000_init.sql
+
+# 3. set the per-app secrets
+echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
+echo -n "https://<lab>.<your-domain-or-workers.dev>" | npx wrangler secret put BETTER_AUTH_URL
+
+# 4. deploy
+cd ../..
+pnpm build && pnpm deploy:all
 ```
-apps/<slug>/
-├── src/
-│   ├── client/          # Vite + React SPA
-│   │   ├── main.tsx
-│   │   └── App.tsx
-│   ├── server/
-│   │   └── api.ts       # Hono router; export `routes`
-│   └── shared/
-│       └── schema.ts    # Drizzle schema; export `schema`
-└── wrangler.jsonc
-```
+
+`pnpm deploy:all` refuses to deploy a fullstack app whose `wrangler.jsonc` still contains the D1 placeholder, so step 1 must be done first. `pnpm build` excludes "pending" apps (placeholder D1) from service bindings + landing automatically — so re-running `pnpm deploy:root` after a scaffold (without provisioning D1) is safe and just leaves the new app dark.
+
+The original `apps/todo/` and `apps/counter/` showcase apps are wired by `scripts/create-lab.mjs` at lab-creation time — those steps run once and you never need to repeat them for the initial pair.
+
+### Hono + Vite (the current fullstack template)
 
 - Hono router is mounted at the app's root (`/apps/<slug>/api/*`).
 - React SPA built and served as static assets via Workers Static Assets binding.
-- Better Auth handler is automatically composed into the Hono router.
+- Better Auth handler is automatically composed into the Hono router at `api/auth/*`.
 
-### What `shared/schema.ts` must export (any framework)
+### What `shared/schema.ts` must export
+
+The scaffolded `shared/schema.ts` is auth-only:
+
+```ts
+import { authSchema } from '@lab/lib/auth-schema';
+export const { user, session, account, verification } = authSchema;
+export const schema = { user, session, account, verification };  // REQUIRED name
+```
+
+When you add business tables, append them and re-export — then run `pnpm db:generate` inside the app to produce a new migration:
 
 ```ts
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { authSchema } from '@lab/lib/auth-schema';
 
-// Better Auth tables: user / session / account / verification
-export const auth = authSchema;
+export const { user, session, account, verification } = authSchema;
 
-// Your business tables
 export const todos = sqliteTable('todos', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => auth.user.id),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
-  done: integer('done', { mode: 'boolean' }).default(false),
+  done: integer('done', { mode: 'boolean' }).notNull().default(false),
 });
 
-// Export ALL tables as a single `schema` object — required name
-export const schema = { ...auth, todos };
+export const schema = { user, session, account, verification, todos };
 ```
 
 ### What the auth helper looks like
@@ -259,7 +238,7 @@ For now, R2 setup is manual. If you need it, ask the lab owner to run `pnpm scaf
 0. **Brand**: each app owns its own `DESIGN.md`. Never copy a brand from a sibling app without the user asking for it. See "Brand and DESIGN.md" above for the full workflow.
 1. **Slugs** are lowercase kebab-case, 3–40 chars, must start with a letter.
 2. **Don't** add new top-level directories. Only `pages/`, `apps/`, `lib/`, `scripts/`, `.github/` are expected.
-3. **Don't** edit the lab's root `wrangler.jsonc` directly — it's regenerated on every build by `scripts/build-lab.mjs`.
+3. **Don't** edit the lab's root `server/wrangler.jsonc` directly unless you know what you're doing — it's the *template*; the deployed config lives at `server/wrangler.generated.jsonc` and is rewritten on every `pnpm build`. Manual edits to the template should not introduce `__PLACEHOLDER__` patterns (the build script aborts on stray placeholders).
 4. **Per-app `wrangler.jsonc` is yours to read** but most edits should be done by the skill. If you must edit, mark it with a `// MANUAL:` comment so the build script preserves it.
 5. **Don't** create migration files in `drizzle/` directories by hand — Drizzle generates them from `schema.ts`.
 6. **Don't** put secrets in code or in committed `.env` files. Lab secrets are managed by `wrangler secret`. If you need a new secret, document it and have the lab owner set it.
@@ -269,13 +248,12 @@ For now, R2 setup is manual. If you need it, ask the lab owner to run `pnpm scaf
 
 ## Things that are auto-managed (don't fight them)
 
-- Root `wrangler.jsonc` (regenerated each build)
-- Per-app `wrangler.jsonc` — initial generation; subsequent edits go through the skill or are marked `// MANUAL:`
+- `server/wrangler.generated.jsonc` (rewritten by build-lab.mjs; this is the file `wrangler deploy` reads)
+- Per-app `wrangler.jsonc` — initial generation by create-lab.mjs (placeholders for D1 id, routes). Subsequent edits via the skill or marked `// MANUAL:`
 - `dist/` — build output for the root Worker's static assets
-- `drizzle/` directories per app — generated migrations
-- D1 database creation per full-stack app
-- Cloudflare Workers Routes (path-prefix dispatch from lab domain to per-app Workers)
-- Better Auth secrets per app (auto-generated, stored in CF secrets)
+- Service Bindings injected into root config based on which fullstack apps have a real (non-placeholder) D1 id
+- Cloudflare Workers Routes (only when a custom domain is configured)
+- Better Auth secrets per app (auto-generated by create-lab.mjs; manual via `wrangler secret put` for apps added after lab creation)
 
 If you find yourself wanting to edit any of these, stop and re-read this doc. There's almost certainly a convention you're missing.
 
@@ -293,18 +271,16 @@ pnpm db:studio <slug>           # open Drizzle Studio
 
 ## Deployment
 
-`git push origin main` triggers GitHub Actions:
+```bash
+pnpm build         # scripts/build-lab.mjs: discover content, build each app,
+                   # write server/wrangler.generated.jsonc with service bindings
+pnpm deploy:all    # scripts/deploy-all.mjs: deploy fullstack Workers first
+                   # (so root's service bindings target real services), then root
+```
 
-1. `pnpm build` — runs `scripts/build-lab.mjs`:
-   - Discovers all pages, static apps, and full-stack apps
-   - Builds each (Vite for static, framework's build for full-stack)
-   - Generates root Worker bundle (serves static + dispatches paths)
-   - Generates per-full-stack-app Worker bundles
-2. `pnpm deploy:all` — wrangler deploy for root Worker + each full-stack Worker
-3. New D1 databases are created on first deploy
-4. Migrations run automatically per app
+`pnpm deploy:root` alone redeploys just the root Worker — useful after editing pages or static apps.
 
-Manual: `pnpm deploy <slug>` to deploy just one app's Worker (skips full lab build).
+A GitHub Actions workflow that wraps these commands isn't shipped yet; for now deploys happen from the lab owner's machine. D1 provisioning + migrations are **not** automatic; see the lifecycle steps under "Adding a full-stack app" above.
 
 ---
 
@@ -312,12 +288,13 @@ Manual: `pnpm deploy <slug>` to deploy just one app's Worker (skips full lab bui
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `/apps/foo/` 404 | Worker Route not configured | Re-run `pnpm deploy foo`; check `wrangler workers domains list` |
+| `/apps/foo/` shows the lab landing in a browser but the right thing in curl | `assets.run_worker_first: true` missing from `server/wrangler.jsonc` (Static Assets answers HTML navigations before Worker code) | Restore the flag and `pnpm deploy:root` |
+| `/apps/foo/` 404 (no service binding) | Fullstack app's D1 still has the `__D1_<SLUG>_ID__` placeholder, so build-lab.mjs treats it as pending and excludes it | Provision the D1, paste id into `apps/foo/wrangler.jsonc`, `pnpm deploy:all` |
 | Full-stack app `/api` 500 | `schema.ts` not exporting required name | Check it exports `schema` (singular, exact name) |
-| Auth fails silently | App's `BETTER_AUTH_SECRET` missing | Re-run `pnpm scaffold:auth-secret <slug>` |
+| Auth fails silently | App's `BETTER_AUTH_SECRET` missing | `cd apps/<slug> && echo -n "$(openssl rand -base64 36)" \| npx wrangler secret put BETTER_AUTH_SECRET` |
 | Hits Workers daily limit (100k) | Free tier exceeded | Upgrade to Workers Paid ($5/mo) or look for runaway requests |
-| "Database not found" on first request | D1 not yet created or not migrated | Wait ~30s after first deploy or run `pnpm db:migrate <slug>` |
-| Lab page lists app but clicking it 404s | App built but route not bound | Run `pnpm deploy <slug>` to ensure route exists |
+| "Database not found" on first request | D1 not yet migrated | `cd apps/<slug> && npx wrangler d1 execute <lab>-<slug> --remote --file drizzle/migrations/0000_init.sql` |
+| `pnpm deploy:root` errors with "Service binding 'APP_FOO' references Worker '…' which was not found" | Build ran with a stale fullstack app entry, OR you deleted a fullstack app's Worker without re-running build | `pnpm build` again so the service-bindings list is rewritten to match reality |
 
 ---
 
