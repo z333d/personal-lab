@@ -1,5 +1,7 @@
 # create-pages-site-template
 
+**English** · [简体中文](./README.zh-CN.md)
+
 A template for **personal "labs"** that host a flat directory of HTML pages, static React apps, and full-stack React+D1 apps under a single Cloudflare Workers domain.
 
 One repo, one Cloudflare account, one subdomain. Add a new page or app by writing one file or one folder — no infra fiddling. Cheap to add, cheap to delete, cheap to graduate when something outgrows the lab.
