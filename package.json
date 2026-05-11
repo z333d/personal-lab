@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm -r --parallel --filter \"./apps/*\" --filter \"./server\" dev",
     "build": "node scripts/build-lab.mjs",
-    "deploy:root": "wrangler deploy --config server/wrangler.jsonc",
+    "deploy:root": "wrangler deploy --config server/wrangler.generated.jsonc",
     "deploy:all": "node scripts/deploy-all.mjs",
     "scaffold": "node scripts/scaffold.mjs"
   },

@@ -73,9 +73,11 @@ if (fs.existsSync(targetDir)) {
 console.log(`Copying apps/${sourceApp}/ → apps/${slug}/...`);
 copyDir(sourceDir, targetDir, ['node_modules', 'dist', '.wrangler']);
 
-// Substitute names in the new app
+// Substitute names in the new app: the slug appears as lowercase identifier,
+// SCREAMING_CASE constant, and a Title-Case display label (HTML <title>, etc.).
 substituteInDir(targetDir, sourceApp, slug);
 substituteInDir(targetDir, sourceApp.toUpperCase(), slug.toUpperCase());
+substituteInDir(targetDir, capitalize(sourceApp), capitalize(slug));
 
 // Update package.json fields explicitly
 const pkgPath = path.join(targetDir, 'package.json');
@@ -92,12 +94,29 @@ fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 // its own opinionated DESIGN.md and themed App.tsx. We don't want a fresh
 // scaffold to silently inherit Notebook or Terminal vibes, because the
 // agent might then iterate on top of a brand the user never asked for.
-//
-// Replace DESIGN.md with a system-flavored placeholder, and replace the
-// app entry component with a "ready to build" shell. Both make it obvious
-// that the next step is asking the user what vibe + feature they want.
 writeNeutralDesignMd(targetDir, slug);
 writeNeutralAppTsx(targetDir, slug, fullstack);
+
+if (fullstack) {
+  // The source fullstack app (todo) has business-specific code that breaks
+  // a naive slug substitution: `todos` (schema identifier) becomes invalid
+  // when the slug contains a hyphen (e.g. `demo-fulls` is not valid JS).
+  // Strip the source/schema/migrations down to auth-only so a fresh scaffold
+  // is a clean blank canvas the user can extend.
+  writeNeutralServerIndex(targetDir, slug);
+  writeNeutralSchema(targetDir);
+  writeNeutralMigration(targetDir);
+  resetD1IdPlaceholder(targetDir, slug);
+}
+
+// Wire the new workspace into the lab's node_modules (fresh apps need their
+// own vite/react/etc. installed via the workspace; without this `pnpm build`
+// fails on the next run).
+console.log(`Installing workspace dependencies...`);
+const installRes = spawnSync('pnpm', ['install'], { cwd: LAB_ROOT, stdio: 'inherit' });
+if (installRes.status !== 0) {
+  console.warn(`  (pnpm install failed — run it manually before building)`);
+}
 
 // Regenerate theme.generated.css from the new neutral DESIGN.md so a fresh
 // `pnpm dev` works immediately without an extra step.
@@ -107,24 +126,22 @@ const themeRes = spawnSync('pnpm', ['--filter', `@lab/${slug}`, 'theme:gen'], {
   stdio: 'inherit',
 });
 if (themeRes.status !== 0) {
-  console.warn(`  (theme:gen failed — run \`pnpm install\` then \`pnpm --filter @lab/${slug} theme:gen\` manually)`);
+  console.warn(`  (theme:gen failed — run \`pnpm --filter @lab/${slug} theme:gen\` manually)`);
 }
 
 console.log(`✓ Created apps/${slug}/`);
-console.log(`  Brand surfaces have been neutralized — DESIGN.md is a placeholder.`);
+console.log(`  Brand surfaces neutralized — DESIGN.md is a placeholder.`);
 console.log(`  Before building UI, ask the user what vibe (editorial / playful / utilitarian / dark / etc.)`);
 console.log(`  and rewrite DESIGN.md, then \`pnpm theme:gen\` to refresh tokens.`);
 if (fullstack) {
-  console.log(`\nNext steps:`);
-  console.log(`  pnpm install`);
-  console.log(`  cd apps/${slug} && npx wrangler d1 create <lab>-${slug}`);
-  console.log(`    (paste the new database_id into apps/${slug}/wrangler.jsonc)`);
-  console.log(`  pnpm db:generate    # in apps/${slug}/`);
-  console.log(`  pnpm db:migrate:remote`);
-  console.log(`  pnpm scaffold:auth-secret ${slug}   # if you have this script`);
-  console.log(`\nThen edit apps/${slug}/src/ to build your feature, and 'git push' to deploy.`);
+  console.log(`\nFullstack apps need a per-app D1 database before they can deploy.`);
+  console.log(`Run from the lab root:`);
+  console.log(`  npx wrangler d1 create <lab>-${slug}`);
+  console.log(`  → copy the returned database_id into apps/${slug}/wrangler.jsonc`);
+  console.log(`  → then \`pnpm build && pnpm deploy:all\` to deploy + bind the route.`);
+  console.log(`  (BETTER_AUTH_SECRET / BETTER_AUTH_URL secrets are set via \`wrangler secret put\`.)`);
 } else {
-  console.log(`\nNext: pnpm install (if needed), edit apps/${slug}/src/App.tsx, git push to deploy.`);
+  console.log(`\nNext: edit apps/${slug}/src/App.tsx, then \`git push\` (or \`pnpm deploy:all\`) to deploy.`);
 }
 
 // ────────── Helpers ──────────
@@ -253,6 +270,154 @@ Spacing values are reference only — they live in this file as documentation, n
 - ✅ Do leave a paragraph here explaining *why* you picked this palette — it helps the agent reason about future UI choices.
 `;
   fs.writeFileSync(designPath, body);
+}
+
+function writeNeutralServerIndex(targetDir, slug) {
+  const target = path.join(targetDir, 'src', 'server', 'index.ts');
+  if (!fs.existsSync(target)) return;
+  fs.writeFileSync(target, `/**
+ * Worker for the ${slug} app.
+ *
+ * Mounts:
+ *   /apps/${slug}/api/auth/*  → Better Auth handler (sign-in / sign-up / session)
+ *   /apps/${slug}/api/me      → current user
+ *   /apps/${slug}/*           → static SPA via ASSETS binding
+ *
+ * Auth is wired but no business endpoints exist yet. Add tables to
+ * shared/schema.ts (and regenerate migrations via \`pnpm db:generate\`),
+ * then add routes here.
+ */
+import { Hono } from 'hono';
+import { createAppAuth, type AuthEnv } from '@lab/lib';
+import { schema } from '../../shared/schema';
+
+type Env = AuthEnv & {
+  ASSETS: Fetcher;
+};
+
+type Variables = {
+  user: { id: string; email: string; name: string } | null;
+  session: { id: string; userId: string } | null;
+};
+
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+app.on(['GET', 'POST'], '/apps/${slug}/api/auth/*', (c) => {
+  const auth = createAppAuth(c.env, schema);
+  return auth.handler(c.req.raw);
+});
+
+app.use('/apps/${slug}/api/*', async (c, next) => {
+  const auth = createAppAuth(c.env, schema);
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  c.set('user', (session?.user as Variables['user']) ?? null);
+  c.set('session', (session?.session as Variables['session']) ?? null);
+  await next();
+});
+
+app.get('/apps/${slug}/api/me', (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ user: null }, 401);
+  return c.json({ user });
+});
+
+app.get('/apps/${slug}/api/health', (c) => c.json({ ok: true, app: '${slug}' }));
+
+export default app;
+`);
+}
+
+function writeNeutralSchema(targetDir) {
+  const target = path.join(targetDir, 'shared', 'schema.ts');
+  if (!fs.existsSync(target)) return;
+  fs.writeFileSync(target, `/**
+ * Drizzle schema for this app's D1 database.
+ *
+ * The placeholder schema is auth-only. When you add business tables,
+ * append them here and re-export them under \`schema\`, then run
+ * \`pnpm db:generate\` (inside the app) to produce a fresh migration.
+ */
+import { authSchema } from '@lab/lib/auth-schema';
+
+export const { user, session, account, verification } = authSchema;
+
+// REQUIRED: build script and runtime expect this exact name.
+export const schema = { user, session, account, verification };
+`);
+}
+
+function writeNeutralMigration(targetDir) {
+  const migDir = path.join(targetDir, 'drizzle', 'migrations');
+  if (!fs.existsSync(migDir)) return;
+  // Wipe whatever was copied from the source app and write a single auth-only
+  // migration. The user can extend it via \`pnpm db:generate\` once they add
+  // business tables.
+  for (const entry of fs.readdirSync(migDir, { withFileTypes: true })) {
+    fs.rmSync(path.join(migDir, entry.name), { recursive: true, force: true });
+  }
+  fs.writeFileSync(path.join(migDir, '0000_init.sql'), `CREATE TABLE \`user\` (
+\t\`id\` text PRIMARY KEY NOT NULL,
+\t\`name\` text NOT NULL,
+\t\`email\` text NOT NULL,
+\t\`email_verified\` integer DEFAULT false NOT NULL,
+\t\`image\` text,
+\t\`created_at\` integer NOT NULL,
+\t\`updated_at\` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX \`user_email_unique\` ON \`user\` (\`email\`);--> statement-breakpoint
+CREATE TABLE \`session\` (
+\t\`id\` text PRIMARY KEY NOT NULL,
+\t\`user_id\` text NOT NULL,
+\t\`token\` text NOT NULL,
+\t\`expires_at\` integer NOT NULL,
+\t\`ip_address\` text,
+\t\`user_agent\` text,
+\t\`created_at\` integer NOT NULL,
+\t\`updated_at\` integer NOT NULL,
+\tFOREIGN KEY (\`user_id\`) REFERENCES \`user\`(\`id\`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX \`session_token_unique\` ON \`session\` (\`token\`);--> statement-breakpoint
+CREATE TABLE \`account\` (
+\t\`id\` text PRIMARY KEY NOT NULL,
+\t\`user_id\` text NOT NULL,
+\t\`account_id\` text NOT NULL,
+\t\`provider_id\` text NOT NULL,
+\t\`access_token\` text,
+\t\`refresh_token\` text,
+\t\`id_token\` text,
+\t\`access_token_expires_at\` integer,
+\t\`refresh_token_expires_at\` integer,
+\t\`scope\` text,
+\t\`password\` text,
+\t\`created_at\` integer NOT NULL,
+\t\`updated_at\` integer NOT NULL,
+\tFOREIGN KEY (\`user_id\`) REFERENCES \`user\`(\`id\`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE \`verification\` (
+\t\`id\` text PRIMARY KEY NOT NULL,
+\t\`identifier\` text NOT NULL,
+\t\`value\` text NOT NULL,
+\t\`expires_at\` integer NOT NULL,
+\t\`created_at\` integer NOT NULL,
+\t\`updated_at\` integer NOT NULL
+);
+`);
+}
+
+function resetD1IdPlaceholder(targetDir, slug) {
+  // Copy from todo brings todo's real D1 UUID; replace it with a marker so a
+  // subsequent deploy fails loudly instead of silently pointing at todo's DB.
+  const wf = path.join(targetDir, 'wrangler.jsonc');
+  if (!fs.existsSync(wf)) return;
+  const text = fs.readFileSync(wf, 'utf8');
+  const stripped = text.replace(
+    /"database_id":\s*"[^"]+"/,
+    `"database_id": "__D1_${slug.toUpperCase().replace(/-/g, '_')}_ID__"`,
+  );
+  fs.writeFileSync(wf, stripped);
 }
 
 function writeNeutralAppTsx(targetDir, slug, fullstack) {

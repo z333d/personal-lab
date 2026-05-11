@@ -48,8 +48,11 @@ const pages = discoverPages();
 const apps = discoverApps();
 const staticApps = apps.filter((a) => !a.fullstack);
 const fullstackApps = apps.filter((a) => a.fullstack);
+const activeFullstackApps = fullstackApps.filter((a) => !a.pending);
+const pendingFullstackApps = fullstackApps.filter((a) => a.pending);
 
-console.log(`  Found ${pages.length} HTML page(s), ${staticApps.length} static app(s), ${fullstackApps.length} fullstack app(s)`);
+console.log(`  Found ${pages.length} HTML page(s), ${staticApps.length} static app(s), ${activeFullstackApps.length} fullstack app(s)` +
+  (pendingFullstackApps.length ? ` (+ ${pendingFullstackApps.length} pending: ${pendingFullstackApps.map((a) => a.dirName).join(', ')})` : ''));
 
 // ────────── 1. Copy HTML pages ──────────
 for (const p of pages) {
@@ -82,8 +85,13 @@ for (const app of fullstackApps) {
 // ────────── 4. Build root Worker bundle ──────────
 buildRootWorker();
 
-// ────────── 4. Generate lab landing page ──────────
-writeLandingPage({ pages, staticApps, fullstackApps });
+// ────────── 4. Generate root wrangler.generated.jsonc (service bindings) ──────────
+// Only "active" fullstack apps (D1 provisioned) get wired — referencing a not-yet-
+// deployed Worker via service binding causes wrangler to fail the root deploy.
+writeRootWranglerConfig({ fullstackApps: activeFullstackApps });
+
+// ────────── 5. Generate lab landing page ──────────
+writeLandingPage({ pages, staticApps, fullstackApps: activeFullstackApps });
 
 // ────────── 5. Write manifest for status page ──────────
 const manifest = {
@@ -121,6 +129,18 @@ function discoverApps() {
       if (!fs.existsSync(pkgPath)) return null;
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
       const fullstack = !!pkg.lab?.fullstack;
+      // A fullstack app is "pending" until its D1 placeholder has been
+      // replaced with a real id (i.e. someone ran `wrangler d1 create` and
+      // pasted the id into wrangler.jsonc). Pending apps are excluded from
+      // service bindings + landing so root deploys don't reference Workers
+      // that haven't been deployed yet.
+      let pending = false;
+      if (fullstack) {
+        const wf = path.join(dir, 'wrangler.jsonc');
+        if (fs.existsSync(wf) && /__D1_[A-Z0-9_]+_ID__/.test(fs.readFileSync(wf, 'utf8'))) {
+          pending = true;
+        }
+      }
       return {
         dirName: entry.name,
         dir,
@@ -129,6 +149,7 @@ function discoverApps() {
         description: pkg.lab?.description || '',
         framework: pkg.lab?.framework || (fullstack ? 'unknown' : 'static'),
         fullstack,
+        pending,
       };
     })
     .filter(Boolean)
@@ -167,6 +188,39 @@ function buildFullstackApp(app) {
   if (result.status !== 0) {
     throw new Error(`Build failed for fullstack app: ${app.dirName}`);
   }
+}
+
+function bindingNameForSlug(slug) {
+  return `APP_${slug.toUpperCase().replace(/-/g, '_')}`;
+}
+
+function writeRootWranglerConfig({ fullstackApps }) {
+  const templatePath = path.join(SERVER_DIR, 'wrangler.jsonc');
+  const generatedPath = path.join(SERVER_DIR, 'wrangler.generated.jsonc');
+  const template = fs.readFileSync(templatePath, 'utf8');
+
+  const services = fullstackApps.map((app) => ({
+    binding: bindingNameForSlug(app.dirName),
+    service: `${LAB_NAME}-${app.dirName}`,
+  }));
+
+  const generated = template.replace(
+    /"__LAB_FULLSTACK_SERVICES__"/,
+    JSON.stringify(services),
+  );
+
+  // Catch any stray placeholders so deploys fail fast with a useful message
+  // instead of wrangler emitting a confusing schema error.
+  const stray = generated.match(/__[A-Z_]+__/);
+  if (stray) {
+    throw new Error(
+      `server/wrangler.jsonc still contains placeholder ${stray[0]}. ` +
+      `Run create-lab.mjs (for a fresh lab) or fix the template before building.`,
+    );
+  }
+
+  fs.writeFileSync(generatedPath, generated);
+  console.log(`  Wrote server/wrangler.generated.jsonc (${services.length} service binding(s))`);
 }
 
 function buildRootWorker() {

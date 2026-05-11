@@ -10,5 +10,5 @@ dist
 .DS_Store
 
 # build-lab.mjs may regenerate these; keep generated marker but ignore content
-server/wrangler.jsonc.generated
+server/wrangler.generated.jsonc
 apps/*/.wrangler

@@ -50,7 +50,7 @@ if (wrCheck.status !== 0 || !wrOut.includes('@')) {
   process.exit(1);
 }
 // Extract email + account ID
-const emailMatch = wrOut.match(/You are logged in[^\n]*?with the email\s+([^\s]+)/i);
+const emailMatch = wrOut.match(/You are logged in[^\n]*?with the email\s+([^\s]+?)\.?(?=[\s,.\n]|$)/i);
 const email = emailMatch ? emailMatch[1] : '(unknown)';
 ok(`wrangler logged in as ${email}`);
 

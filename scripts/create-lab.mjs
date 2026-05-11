@@ -104,9 +104,11 @@ substituteInDir(labDir, '__LAB_NAME__', labName);
 
 // Substitute route placeholders. If we have a custom domain, set up routes;
 // otherwise use null (workers.dev URL only).
+// wrangler 4 rejects `"routes": null`; use an empty array when no custom domain
+// (workers_dev still defaults to true, so the *.workers.dev URL stays available).
 const rootRoutesJson = customDomain
   ? JSON.stringify([{ pattern: customDomain, custom_domain: true }])
-  : 'null';
+  : '[]';
 substituteInDir(labDir, '"__LAB_ROOT_ROUTES__"', rootRoutesJson);
 
 // Per-fullstack-app routes will be substituted after we discover them, below.
@@ -143,7 +145,7 @@ for (const app of fullstackApps) {
   const placeholder = `"__APP_${app.slug.toUpperCase()}_ROUTES__"`;
   const routesJson = customDomain
     ? JSON.stringify([{ pattern: `${customDomain}/apps/${app.slug}/*`, zone_name: cfg.defaultZone }])
-    : 'null';
+    : '[]';
   substituteInFile(path.join(app.dir, 'wrangler.jsonc'), placeholder, routesJson);
 }
 
@@ -238,31 +240,36 @@ if (skipDeploy) {
   process.exit(0);
 }
 
-// ────────── 9. Deploy root Worker ──────────
-step('Deploy root Worker');
-run('npx', ['wrangler', 'deploy', '--config', 'server/wrangler.jsonc'], { cwd: labDir });
-ok('root Worker deployed');
-
-// ────────── 10. Deploy each fullstack app's Worker (first time, no secrets yet) ──────────
+// ────────── 9. Deploy each fullstack app's Worker FIRST ──────────
+// (Must precede root deploy so root's service bindings target real services.)
 for (const app of fullstackApps) {
   step(`Deploy ${app.slug} Worker (initial)`);
   run('npx', ['wrangler', 'deploy'], { cwd: app.dir });
   ok(`${app.slug} Worker deployed`);
 }
 
-// ────────── 11. Set secrets per fullstack app (Worker now exists) ──────────
+// ────────── 10. Set secrets per fullstack app (Worker now exists) ──────────
 for (const app of fullstackApps) {
   step(`Set secrets for ${app.slug}`);
   const secret = randomBytes(48).toString('base64url');
   // Better Auth expects baseURL = origin only. The path lives in basePath
-  // (set in lib/auth-setup.ts via APP_BASE_PATH).
+  // (set in lib/auth-setup.ts via APP_BASE_PATH). When deployed without a
+  // custom domain, traffic still arrives via the root Worker's hostname
+  // (service-binding dispatch keeps the original request URL), so the origin
+  // is the *root* Worker's, not the fullstack Worker's own workers.dev URL.
+  const accountSub = cfg.cloudflareEmail?.split('@')[0] || 'account';
   const baseUrl = customDomain
     ? `https://${customDomain}`
-    : `https://${labName}-${app.slug}.${cfg.cloudflareEmail?.split('@')[0] || 'account'}.workers.dev`;
+    : `https://${labName}.${accountSub}.workers.dev`;
   setSecret(app.dir, 'BETTER_AUTH_SECRET', secret);
   setSecret(app.dir, 'BETTER_AUTH_URL', baseUrl);
   ok(`secrets set for ${app.slug}`);
 }
+
+// ────────── 11. Deploy root Worker (now its service bindings have real targets) ──────────
+step('Deploy root Worker');
+run('npx', ['wrangler', 'deploy', '--config', 'server/wrangler.generated.jsonc'], { cwd: labDir });
+ok('root Worker deployed');
 
 // Routes are declared in each Worker's wrangler.jsonc and applied automatically
 // by `wrangler deploy`. No additional binding step needed here.

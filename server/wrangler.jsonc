@@ -7,7 +7,13 @@
   "assets": {
     "directory": "../dist/client",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // CRITICAL: without this the Static Assets runtime answers HTML
+    // navigations (Accept: text/html, …) BEFORE Worker code runs, which
+    // hijacks /apps/<fullstack-slug>/* to the SPA fallback (the landing
+    // page) instead of letting our Hono router dispatch via service
+    // binding. Setting run_worker_first restores correct dispatch.
+    "run_worker_first": true
   },
   "vars": {
     "LAB_NAME": "__LAB_NAME__"
@@ -17,10 +23,15 @@
   // domain (or workers.dev fallback) is known. The placeholder below is a
   // no-op JSON marker until then.
   "routes": "__LAB_ROOT_ROUTES__",
+  // Service bindings to per-app fullstack Workers, injected at build time by
+  // scripts/build-lab.mjs. With these bindings, the root Worker can dispatch
+  // /apps/<slug>/* to the right Worker on every routing mode (custom domain
+  // or workers.dev), not just when Cloudflare Workers Routes intercepts.
+  "services": "__LAB_FULLSTACK_SERVICES__",
   "observability": {
     "enabled": true
   }
-  // Note: this file is the template. build-lab.mjs may inject additional vars
-  // (LAB_MANIFEST) and never overwrites your manual edits unless they're
-  // marked with a "// MANUAL:" comment.
+  // Note: this file is the template — edits made here flow into
+  // server/wrangler.generated.jsonc on every build. Deploy commands use the
+  // generated file. Mark any manual edits with a "// MANUAL:" comment.
 }
