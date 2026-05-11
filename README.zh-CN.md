@@ -1,4 +1,4 @@
-# create-pages-site-template
+# personal-lab
 
 [English](./README.md) · **简体中文**
 
@@ -27,8 +27,8 @@
 新机器一次性配置：
 
 ```bash
-git clone git@github.com:z333d/create-pages-site-template.git
-cd create-pages-site-template
+git clone git@github.com:z333d/personal-lab.git
+cd personal-lab
 pnpm install
 npx wrangler login                       # 交互式浏览器登录
 node scripts/setup.mjs                   # 写 ~/.config/create-pages-site/config.json

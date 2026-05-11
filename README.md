@@ -1,4 +1,4 @@
-# create-pages-site-template
+# personal-lab
 
 **English** · [简体中文](./README.zh-CN.md)
 
@@ -27,8 +27,8 @@ Stack per fullstack app: Vite + React 19, Hono on Workers, Drizzle on D1, Better
 One-time setup on a fresh machine:
 
 ```bash
-git clone git@github.com:z333d/create-pages-site-template.git
-cd create-pages-site-template
+git clone git@github.com:z333d/personal-lab.git
+cd personal-lab
 pnpm install
 npx wrangler login                       # interactive browser flow
 node scripts/setup.mjs                   # writes ~/.config/create-pages-site/config.json
