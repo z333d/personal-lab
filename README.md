@@ -225,4 +225,4 @@ pnpm scaffold rm sketchnote
 
 ## Why a template and not a starter generator
 
-A template is just a folder you clone. Everything is visible, everything is editable, and there is no "generate-then-eject" cliff. The Claude Code skill `create-pages-site` wraps the `create-lab.mjs` flow with a conversational interface, but the template stands on its own — anyone (or any agent) with a Cloudflare account and a GitHub account can run the scripts directly.
+A template is just a folder you clone. Everything is visible, everything is editable, and there is no "generate-then-eject" cliff. A companion Claude Code skill (`create-personal-lab`) is planned that wraps the `create-lab.mjs` flow with a conversational interface, but the template stands on its own — anyone (or any agent) with a Cloudflare account and a GitHub account can run the scripts directly.

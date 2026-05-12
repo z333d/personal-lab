@@ -225,4 +225,4 @@ pnpm scaffold rm sketchnote
 
 ## 为什么是模板而不是生成器
 
-模板就是一个可以 clone 的文件夹，所有东西都看得见、改得动，没有"先生成、再 eject"的悬崖。Claude Code 的 `create-pages-site` skill 把 `create-lab.mjs` 流程包成对话式接口，但模板本身独立可用 —— 任何有 Cloudflare 账号 + GitHub 账号的人（或 agent）都可以直接跑这些脚本。
+模板就是一个可以 clone 的文件夹，所有东西都看得见、改得动，没有"先生成、再 eject"的悬崖。计划中有一个配套的 Claude Code skill（`create-personal-lab`），把 `create-lab.mjs` 流程包成对话式接口，但模板本身独立可用 —— 任何有 Cloudflare 账号 + GitHub 账号的人（或 agent）都可以直接跑这些脚本。
