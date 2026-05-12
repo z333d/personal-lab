@@ -73,10 +73,12 @@ Edit `src/` like any Vite + React app. After `git push`, live at `/apps/<slug>/`
 ## Adding a full-stack app
 
 ```bash
-pnpm scaffold app <slug> --fullstack
+pnpm scaffold app <slug> --fullstack --deploy
 ```
 
 A full-stack app is a **complete child project** with its own `wrangler.jsonc` and its own Worker on deploy. The scaffolder copies from `apps/todo/` (Hono + Vite + React) and neutralizes the brand + business code so you start from a clean auth-only template. Other frameworks (TanStack Start, Astro) are *not* wired in yet — only `hono-vite` works today.
+
+Drop `--deploy` if you want to inspect intermediate state (the scaffold then leaves the Cloudflare side to you — see "Lifecycle" below for the four manual steps).
 
 The lab's build script wires the new app into the root Worker's path routing via service bindings once you provision its D1 (see "Lifecycle" below).
 
@@ -326,7 +328,7 @@ pnpm deploy:all    # scripts/deploy-all.mjs: deploy fullstack Workers first
 | Full-stack app `/api` 500 | `schema.ts` not exporting required name | Check it exports `schema` (singular, exact name) |
 | Auth fails silently | App's `BETTER_AUTH_SECRET` missing | `cd apps/<slug> && echo -n "$(openssl rand -base64 36)" \| npx wrangler secret put BETTER_AUTH_SECRET` |
 | Hits Workers daily limit (100k) | Free tier exceeded | Upgrade to Workers Paid ($5/mo) or look for runaway requests |
-| "Database not found" on first request | D1 not yet migrated | `cd apps/<slug> && npx wrangler d1 execute <lab>-<slug> --remote --file drizzle/migrations/0000_init.sql` |
+| "Database not found" on first request | D1 not yet migrated | `cd apps/<slug> && pnpm db:migrate:remote` |
 | `pnpm deploy:root` errors with "Service binding 'APP_FOO' references Worker '…' which was not found" | Build ran with a stale fullstack app entry, OR you deleted a fullstack app's Worker without re-running build | `pnpm build` again so the service-bindings list is rewritten to match reality |
 
 ---

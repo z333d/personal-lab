@@ -130,6 +130,33 @@ try {
   if (fs.existsSync(claudeMd)) fs.unlinkSync(claudeMd);
   fs.symlinkSync('AGENTS.md', claudeMd);
 } catch (e) { /* non-fatal */ }
+
+// Replace the template's README (which talks about cloning the template,
+// running setup.mjs, etc.) with a short lab-specific one. The user can
+// edit / replace this freely; it's their lab now. Drop the zh-CN README
+// (the template's bilingual mirror) for the same reason.
+fs.writeFileSync(
+  path.join(labDir, 'README.md'),
+  `# ${labName}
+
+A personal lab generated from [\`z333d/personal-lab\`](https://github.com/z333d/personal-lab).
+${customDomain ? `Live at <https://${customDomain}>.` : `Live at <https://${labName}.<your-account>.workers.dev>.`}
+
+## How to use this repo
+
+- **Add an HTML page**: \`pnpm scaffold page <slug>\`
+- **Add a static React app**: \`pnpm scaffold app <slug>\`
+- **Add a full-stack app (login + DB)**: \`pnpm scaffold app <slug> --fullstack --deploy\`
+- **Remove anything**: \`pnpm scaffold rm <slug>\`
+- **Local dev**: \`pnpm dev\`
+- **Deploy everything**: \`pnpm deploy:all\`
+
+See [AGENTS.md](./AGENTS.md) for the full operating manual (conventions, design vocabulary, troubleshooting), and [design-patterns.md](./design-patterns.md) for the brand register vocabulary the agent + you share when picking a look for a new app.
+`,
+);
+const zhReadme = path.join(labDir, 'README.zh-CN.md');
+if (fs.existsSync(zhReadme)) fs.unlinkSync(zhReadme);
+
 cleanupActions.push(() => fs.rmSync(labDir, { recursive: true, force: true }));
 ok(`template copied to ${labDir}`);
 
