@@ -166,6 +166,8 @@ pnpm deploy:root                  # 只重部 root Worker（页面 + 静态 app 
 pnpm deploy:all                   # 全量（root + 每个全栈 Worker）
 ```
 
+或者，在 repo 加 `CLOUDFLARE_API_TOKEN` secret 后（Settings → Secrets and variables → Actions），`.github/workflows/deploy.yml` 会在每次 push 到 main 时自动跑 `pnpm deploy:all`，也支持手动 dispatch。新全栈应用首次 `--deploy` 仍然要在本机跑（CF 资源 provisioning），之后的 redeploy 走 CI。
+
 **删除一个 page 或 app**
 
 ```bash

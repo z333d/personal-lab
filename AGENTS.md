@@ -305,7 +305,7 @@ pnpm deploy:all    # scripts/deploy-all.mjs: deploy fullstack Workers first
 
 `pnpm deploy:root` alone redeploys just the root Worker — useful after editing pages or static apps.
 
-A GitHub Actions workflow that wraps these commands isn't shipped yet; for now deploys happen from the lab owner's machine. D1 provisioning + migrations are **not** automatic; see the lifecycle steps under "Adding a full-stack app" above.
+`.github/workflows/deploy.yml` runs the same `pnpm build && pnpm deploy:all` automatically on every push to `main` (and on manual dispatch). Required setup: add a `CLOUDFLARE_API_TOKEN` repo secret with `Workers Scripts Edit` + `D1 Edit` + `R2 Storage Edit` permissions. See https://developers.cloudflare.com/workers/wrangler/ci-cd/. D1 provisioning is *not* automatic in CI — new fullstack apps still need a one-time `pnpm scaffold app <slug> --fullstack --deploy` from the lab owner's machine (or the manual lifecycle steps).
 
 ---
 

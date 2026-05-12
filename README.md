@@ -166,6 +166,8 @@ pnpm deploy:root                  # root Worker only (pages + static apps + land
 pnpm deploy:all                   # everything (root + each fullstack Worker)
 ```
 
+Or, once you've added a `CLOUDFLARE_API_TOKEN` secret to the repo (Settings → Secrets and variables → Actions), `.github/workflows/deploy.yml` runs `pnpm deploy:all` automatically on every push to `main` and on manual dispatch. New fullstack apps still need their first `--deploy` from a local machine (to provision D1 and set secrets); CI only handles subsequent redeploys.
+
 **Remove a page or app**
 
 ```bash
