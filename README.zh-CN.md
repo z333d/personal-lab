@@ -22,30 +22,74 @@
 
 ---
 
-## 创建一个新 lab
+## 前置依赖
 
-新机器一次性配置：
+开始之前需要的东西（这些是所有 lab 共用的基础，不只是这个模板）：
+
+- 一个 **GitHub 账号**（免费层即可）
+- 一个 **Cloudflare 账号**（免费层即可 —— 100 个 Worker + 10 个 D1 数据库的限额对个人 lab 完全够用）
+- *可选：* 一个由 Cloudflare DNS 托管的域名 —— 如果你想用 `<lab>.<你的域名>` 而不是 `<lab>.<account>.workers.dev`
+
+CLI 工具（macOS 命令；Linux/Windows 等价替换）：
+
+| 工具 | 安装 | 登录 |
+|---|---|---|
+| Node 20+ | `brew install node`（或用 `nvm` / `fnm`） | — |
+| pnpm 10+ | `corepack enable pnpm`（Node 22+ 自带 corepack） | — |
+| gh CLI | `brew install gh` | `gh auth login`（选 SSH） |
+| wrangler | 内置 —— 下一步 `pnpm install` 时会装 | `npx wrangler login`（浏览器交互登录） |
+
+*可选但推荐：* 给 gh 授予 `delete_repo` scope，后面想删测试 lab 用 CLI 就方便 —— 默认 `gh auth login` 不包含这个权限。
+
+```bash
+gh auth refresh -h github.com -s delete_repo
+```
+
+继续之前自检一下：
+
+```bash
+node --version       # v20 或更高
+pnpm --version       # 10 或更高
+gh auth status       # "Logged in to github.com account <你>"
+npx wrangler whoami  # "You are logged in with … associated with the email …"
+```
+
+---
+
+## 配置（每个用户一次）
+
+Clone 模板并跑一次 setup 向导。模板可以一直留在硬盘上 —— 你只需要 clone 一次，从它创建出来的每个 lab 都在自己独立的目录里。
 
 ```bash
 git clone git@github.com:z333d/personal-lab.git
 cd personal-lab
 pnpm install
-npx wrangler login                       # 交互式浏览器登录
-node scripts/setup.mjs                   # 写 ~/.config/create-pages-site/config.json
+node scripts/setup.mjs       # 写 ~/.config/personal-lab/config.json
 ```
 
-然后创建你的 lab（端到端 ~2 分钟）：
+`setup.mjs` 问你三件事，每件都有合理的默认值：
+
+1. **GitHub 账号 / org** —— 新 lab repo 创建在哪个账号下（默认你的 `gh` 登录账号）
+2. **URL 模式** —— 用 `<lab>.<你的域名>`（需要一个由 Cloudflare 托管的 zone）或 `<lab>.<account>.workers.dev`
+3. **新 lab 放在硬盘哪个目录** —— 例如 `~/projects/playground`
+
+---
+
+## 创建一个 lab
 
 ```bash
-node scripts/create-lab.mjs <lab-name>   # 一条命令搞定：
-#   • 把模板拷到 <projects-dir>/<lab-name>/
-#   • 建 GitHub 仓库 + 首次 commit + push
-#   • 为每个全栈 app 建 D1 + 跑迁移
-#   • 部署所有 Worker + 设置 BETTER_AUTH_SECRET / BETTER_AUTH_URL
-#   • 打印线上 URL
+node scripts/create-lab.mjs <lab-name>   # 端到端 ~2 分钟
 ```
 
-可选 flag：`--no-deploy`（不动 Cloudflare）、`--no-domain`（用 *.workers.dev）、`--domain my.example.com`、`--keep-on-fail`（出错不回滚便于排查）、`--org <github-owner>`。
+一条命令搞定：
+
+- 把模板拷到 `<projects-dir>/<lab-name>/`
+- 建 GitHub 仓库 + 首次 commit + push
+- 为每个全栈 app 建 D1 + 跑迁移
+- 部署所有 Worker + 设置 `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL`
+- 打印线上 URL
+
+可选 flag：`--no-deploy`（不动 Cloudflare）、`--no-domain`（强制用 *.workers.dev）、`--domain my.example.com`（覆盖配置的 zone）、`--keep-on-fail`（出错不回滚，便于排查）、`--org <github-owner>`（覆盖配置的 GitHub 账号）。
 
 ---
 

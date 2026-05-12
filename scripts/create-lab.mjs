@@ -24,8 +24,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // (scripts/ lives inside the template).
 const TEMPLATE_ROOT = path.resolve(__dirname, '..');
 
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'create-pages-site');
+const CONFIG_DIR = path.join(os.homedir(), '.config', 'personal-lab');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
+const LEGACY_CONFIG_PATH = path.join(os.homedir(), '.config', 'create-pages-site', 'config.json');
 
 // ────────── Logger ──────────
 const log = (msg) => console.log(msg);
@@ -52,10 +53,15 @@ if (!labName || !/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/.test(labName)) {
 }
 
 // ────────── Load config ──────────
-if (!fs.existsSync(CONFIG_PATH)) {
-  fail(`Config not found at ${CONFIG_PATH}\nRun: node setup.mjs`);
+// Honor the legacy ~/.config/create-pages-site/config.json if the new path is
+// missing — the project was renamed; this saves "go run setup again" for
+// existing users.
+let configPath = CONFIG_PATH;
+if (!fs.existsSync(configPath)) {
+  if (fs.existsSync(LEGACY_CONFIG_PATH)) configPath = LEGACY_CONFIG_PATH;
+  else fail(`Config not found at ${CONFIG_PATH}\nRun: node setup.mjs`);
 }
-const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 const githubOrg = opts.org || cfg.githubOrg;
 const projectsDir = cfg.projectsDir.replace(/^~/, os.homedir());
 const useCustomDomain = !flags.has('--no-domain') && (!!cfg.defaultZone || !!opts.domain);
@@ -224,7 +230,7 @@ ok('build succeeded');
 step('Create GitHub repo + push');
 run('git', ['init', '-b', 'main'], { cwd: labDir });
 run('git', ['add', '-A'], { cwd: labDir });
-run('git', ['commit', '-m', 'init: scaffold from create-pages-site'], { cwd: labDir });
+run('git', ['commit', '-m', 'init: scaffold from personal-lab'], { cwd: labDir });
 const ghCreate = spawnSync('gh', ['repo', 'create', `${githubOrg}/${labName}`, '--private', '--source=.', '--push'], {
   cwd: labDir,
   stdio: 'inherit',

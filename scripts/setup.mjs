@@ -2,7 +2,7 @@
 /**
  * setup.mjs — first-time configuration wizard.
  *
- * Verifies wrangler + gh logins and writes ~/.config/create-pages-site/config.json
+ * Verifies wrangler + gh logins and writes ~/.config/personal-lab/config.json
  * with defaults the orchestrator needs (GitHub org, projects dir, default zone).
  *
  * No secrets are stored — the wrangler login + gh login already handle credentials
@@ -15,8 +15,11 @@ import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { spawnSync } from 'node:child_process';
 
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'create-pages-site');
+const CONFIG_DIR = path.join(os.homedir(), '.config', 'personal-lab');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
+// The project was previously named create-pages-site-template; fall back to its
+// legacy config path so existing users don't need to re-run setup.
+const LEGACY_CONFIG_PATH = path.join(os.homedir(), '.config', 'create-pages-site', 'config.json');
 
 const rl = readline.createInterface({ input, output });
 const ask = (q, def) => rl.question(def !== undefined && def !== '' ? `${q} [${def}]: ` : `${q}: `).then((a) => a.trim() || def || '');
@@ -25,9 +28,15 @@ function ok(msg) { console.log(`  \x1b[32m✓\x1b[0m ${msg}`); }
 function step(msg) { console.log(`\n\x1b[36m▸ ${msg}\x1b[0m`); }
 function err(msg) { console.error(`  \x1b[31m✗\x1b[0m ${msg}`); }
 
-console.log('🔧 create-pages-site setup\n');
+console.log('🔧 personal-lab setup\n');
 
-const existing = fs.existsSync(CONFIG_PATH) ? JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) : {};
+let existing = {};
+if (fs.existsSync(CONFIG_PATH)) {
+  existing = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+} else if (fs.existsSync(LEGACY_CONFIG_PATH)) {
+  existing = JSON.parse(fs.readFileSync(LEGACY_CONFIG_PATH, 'utf8'));
+  console.log(`  (migrating defaults from legacy ${LEGACY_CONFIG_PATH})\n`);
+}
 
 // ── 1. GitHub ──
 step('GitHub');

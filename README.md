@@ -22,30 +22,74 @@ Stack per fullstack app: Vite + React 19, Hono on Workers, Drizzle on D1, Better
 
 ---
 
-## Bootstrapping a new lab
+## Prerequisites
 
-One-time setup on a fresh machine:
+What you need before starting (covers all your labs, not just this template):
+
+- A **GitHub account** (free tier OK).
+- A **Cloudflare account** (free tier OK — 100 Workers + 10 D1 databases per account is plenty for a personal lab).
+- *Optional:* a domain managed by Cloudflare DNS if you want labs at `<lab>.<your-domain>` instead of `<lab>.<account>.workers.dev`.
+
+CLI tools (macOS install commands shown — Linux/Windows equivalents work too):
+
+| Tool | Install | Authenticate |
+|---|---|---|
+| Node 20+ | `brew install node` (or use `nvm` / `fnm`) | — |
+| pnpm 10+ | `corepack enable pnpm` (built into Node 22+) | — |
+| gh CLI | `brew install gh` | `gh auth login` (choose SSH) |
+| wrangler | bundled — installed by `pnpm install` in the next step | `npx wrangler login` (interactive browser flow) |
+
+*Optional but recommended:* grant the `delete_repo` scope so you can delete experimental labs from the CLI later — the default `gh auth login` doesn't include it.
+
+```bash
+gh auth refresh -h github.com -s delete_repo
+```
+
+Sanity-check before continuing:
+
+```bash
+node --version       # v20 or later
+pnpm --version       # 10 or later
+gh auth status       # "Logged in to github.com account <you>"
+npx wrangler whoami  # "You are logged in with … associated with the email …"
+```
+
+---
+
+## Setup (one-time per user)
+
+Clone this template and run the setup wizard. The template can stay on disk forever — you only clone it once, and each lab you create from it lives in its own directory.
 
 ```bash
 git clone git@github.com:z333d/personal-lab.git
 cd personal-lab
 pnpm install
-npx wrangler login                       # interactive browser flow
-node scripts/setup.mjs                   # writes ~/.config/create-pages-site/config.json
+node scripts/setup.mjs       # writes ~/.config/personal-lab/config.json
 ```
 
-Then create your lab (takes ~2 minutes end-to-end):
+`setup.mjs` asks three things, each with a sensible default:
+
+1. **GitHub owner** for new lab repos (defaults to your `gh` login).
+2. **URL pattern** for labs — either `<lab>.<your-domain>` (requires a Cloudflare-managed zone) or `<lab>.<account>.workers.dev`.
+3. **Where to put new labs on disk** — e.g. `~/projects/playground`.
+
+---
+
+## Create a lab
 
 ```bash
-node scripts/create-lab.mjs <lab-name>   # all-in-one:
-#   • copies template → <projects-dir>/<lab-name>/
-#   • creates the GitHub repo + first commit + push
-#   • creates per-app D1 + runs migrations
-#   • deploys every Worker + sets BETTER_AUTH_SECRET / BETTER_AUTH_URL
-#   • prints the live URL
+node scripts/create-lab.mjs <lab-name>   # ~2 minutes end-to-end
 ```
 
-Flags: `--no-deploy` (skip Cloudflare), `--no-domain` (use *.workers.dev), `--domain my.example.com`, `--keep-on-fail` (don't roll back on errors), `--org <github-owner>`.
+Does everything in one go:
+
+- Copies the template → `<projects-dir>/<lab-name>/`
+- Creates the GitHub repo + first commit + push
+- Creates per-app D1 + runs migrations
+- Deploys every Worker + sets `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL`
+- Prints the live URL
+
+Flags: `--no-deploy` (skip Cloudflare), `--no-domain` (force *.workers.dev), `--domain my.example.com` (override the configured zone for this lab), `--keep-on-fail` (don't roll back on errors — useful for debugging), `--org <github-owner>` (override the configured GitHub owner).
 
 ---
 
