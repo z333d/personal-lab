@@ -200,11 +200,24 @@ pnpm scaffold r2 <bucket>
 
 ## Built-in examples
 
-- **`apps/todo/`** — fullstack app, Notebook register (warm cream, serif, quiet personal tool).
-- **`apps/counter/`** — static app, Terminal register (monospace, dark, dense).
-- **`pages/welcome.html`** — sample HTML page.
+A fresh lab ships with two showcase apps and six HTML pages — one per [design pattern](./design-patterns.md) — so the very first thing you see on the landing is "this is what your lab could look like":
 
-These are the working references both the agent and you can read when in doubt.
+- **`apps/todo/`** — fullstack app, **Notebook** register (warm cream, serif, quiet personal tool).
+- **`apps/counter/`** — static app, **Terminal** register (monospace, dark, dense).
+- **`pages/essay.html`** — **Essay** register (single column, paper serif, long-form reading).
+- **`pages/sketchnote.html`** — **Sketchnote** register (handmade, washi tape, marginalia).
+- **`pages/postcard.html`** — **Postcard** register (centered card, ornamental, special-occasion).
+- **`pages/manifesto.html`** — **Manifesto** register (full-bleed color blocks, condensed display, one thesis per screen).
+- **`pages/playful.html`** — **Neo-Memphis Playful** register (cream + saturated panels + tape/stickers).
+- **`pages/welcome.html`** — short Notebook-flavored hello page.
+
+The six pages are tagged on the landing as *starter examples*. Delete the ones you don't want:
+
+```bash
+pnpm scaffold rm essay
+pnpm scaffold rm sketchnote
+# etc.
+```
 
 ---
 

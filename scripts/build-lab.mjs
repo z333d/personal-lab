@@ -115,7 +115,15 @@ function discoverPages() {
   if (!fs.existsSync(PAGES_DIR)) return [];
   return fs.readdirSync(PAGES_DIR)
     .filter((f) => f.endsWith('.html'))
-    .map((file) => ({ file, slug: file.replace(/\.html$/, '') }))
+    .map((file) => {
+      const slug = file.replace(/\.html$/, '');
+      // A page can self-tag as a "starter example" with an HTML comment so
+      // build-lab.mjs renders a small badge on the landing. Useful for the
+      // demos that ship with a fresh lab so the user knows they can rm them.
+      const content = fs.readFileSync(path.join(PAGES_DIR, file), 'utf8');
+      const isExample = /<!--\s*lab-example\s*-->/.test(content);
+      return { file, slug, isExample };
+    })
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
@@ -345,6 +353,13 @@ function writeLandingPage({ pages, staticApps, fullstackApps }) {
       white-space: nowrap;
       text-align: right;
     }
+    td.kind .example {
+      color: var(--fg-muted);
+      margin-left: 6px;
+      font-style: italic;
+      text-transform: none;
+      letter-spacing: 0;
+    }
     .empty {
       font-family: var(--sans);
       font-size: 13px;
@@ -376,7 +391,7 @@ function writeLandingPage({ pages, staticApps, fullstackApps }) {
     </div>
     <p class="lede">Index of pages and apps in this lab. Each app carries its own brand via <code>apps/&lt;slug&gt;/DESIGN.md</code>; this page is just the directory.</p>
 
-    ${renderSection('pages/', pages.map((p) => ({ name: p.slug, href: `/pages/${p.file}`, kind: 'html' })))}
+    ${renderSection('pages/', pages.map((p) => ({ name: p.slug, href: `/pages/${p.file}`, kind: 'html', isExample: p.isExample })))}
     ${renderSection('apps/ — static', staticApps.map((a) => ({ name: a.dirName, href: `/apps/${a.dirName}/`, kind: a.framework || 'static' })))}
     ${renderSection('apps/ — fullstack', fullstackApps.map((a) => ({ name: a.dirName, href: `/apps/${a.dirName}/`, kind: a.framework })))}
 
@@ -393,7 +408,10 @@ function writeLandingPage({ pages, staticApps, fullstackApps }) {
 function renderSection(title, items) {
   if (!items.length) return '';
   return `<section><h2>${escapeHtml(title)}</h2><table><tbody>` +
-    items.map((i) => `<tr><td class="name"><a href="${i.href}">${escapeHtml(i.name)}</a></td><td class="kind">${escapeHtml(i.kind || '')}</td></tr>`).join('') +
+    items.map((i) => {
+      const exampleTag = i.isExample ? '<span class="example">starter example</span>' : '';
+      return `<tr><td class="name"><a href="${i.href}">${escapeHtml(i.name)}</a></td><td class="kind">${escapeHtml(i.kind || '')}${exampleTag}</td></tr>`;
+    }).join('') +
     '</tbody></table></section>';
 }
 

@@ -1,0 +1,166 @@
+<!doctype html>
+<!-- lab-example -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>On personal labs · essay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap"
+  />
+  <style>
+    /* ESSAY register · See ./design-patterns.md
+       Single column, serif-led, paper-warm. Built for sustained reading.
+       Strict typographic discipline — no buttons, no sidebars, nothing
+       that asks for attention except the type itself.                 */
+    :root {
+      --bg: #fbf6ee;
+      --ink: #1d1a16;
+      --ink-soft: #57514a;
+      --rule: #d9d2c5;
+      --link: #a85a3e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16140f;
+        --ink: #e9e3d4;
+        --ink-soft: #aea795;
+        --rule: #2d2820;
+        --link: #d18563;
+      }
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Newsreader', 'Iowan Old Style', 'Source Serif Pro', 'Georgia', serif;
+      font-size: 19px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .essay {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: clamp(56px, 10vw, 112px) clamp(24px, 5vw, 40px) 96px;
+    }
+    .kicker {
+      font-size: 13px;
+      font-style: italic;
+      color: var(--ink-soft);
+      margin: 0 0 6px;
+    }
+    h1 {
+      font-size: clamp(34px, 4.5vw, 44px);
+      font-weight: 500;
+      line-height: 1.15;
+      letter-spacing: -0.012em;
+      margin: 0 0 28px;
+    }
+    .byline {
+      font-size: 14px;
+      color: var(--ink-soft);
+      font-style: italic;
+      margin: 0 0 48px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--rule);
+    }
+    p { margin: 0 0 1.2em; }
+    p + p { text-indent: 1.6em; }
+    .lede { font-size: 20px; }
+    .lede::first-letter {
+      font-size: 64px;
+      font-weight: 600;
+      float: left;
+      line-height: 0.9;
+      margin: 6px 10px -2px -2px;
+      color: var(--link);
+    }
+    .lede + p, p.no-indent { text-indent: 0; }
+    em { color: var(--ink); }
+    a {
+      color: var(--link);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+    blockquote {
+      margin: 28px 0;
+      padding: 0 0 0 24px;
+      border-left: 2px solid var(--rule);
+      color: var(--ink-soft);
+      font-style: italic;
+    }
+    .rule {
+      width: 80px;
+      height: 1px;
+      background: var(--rule);
+      margin: 36px auto;
+      border: 0;
+    }
+    .endmark {
+      display: block;
+      text-align: right;
+      color: var(--ink-soft);
+      font-style: italic;
+      margin-top: 32px;
+    }
+    .footer {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 0 clamp(24px, 5vw, 40px) 56px;
+      font-size: 13px;
+      color: var(--ink-soft);
+      font-style: italic;
+    }
+    .footer a { color: var(--ink-soft); }
+  </style>
+</head>
+<body>
+  <article class="essay">
+    <p class="kicker">Essay · register</p>
+    <h1>On personal labs</h1>
+    <p class="byline">A note on building software for an audience of one.</p>
+
+    <p class="lede">
+      Most software is built for strangers. Strangers have feature requests, retention curves, support tickets, refund threats. A product that wants to keep strangers happy has to listen to all of that, all the time. A personal lab — a small repository of pages and tools you make for yourself — is what's left when that audience disappears.
+    </p>
+
+    <p>
+      The disappearance changes everything. A side project that nobody else uses has no growth expectations. No SLA. No "what's our retention" question to answer at the end of the quarter. The only metric is whether it makes <em>your</em> day better tomorrow than it did today. If the answer is no, you delete the folder and the world is unaffected.
+    </p>
+
+    <p>
+      This sounds modest, and it is. But modesty has a particular freedom: you can build the version of something that's exactly right for you, instead of the version that's <em>approximately</em> right for ten thousand people. The to-do app that knows you read better at night. The reading list that orders books the way you actually pick them off the shelf. The drinking-water tracker that nags you in your own voice instead of a marketer's. None of these are venture-fundable; all of them are achievable in an afternoon.
+    </p>
+
+    <blockquote>
+      The unit of personal-lab work is not the feature; it's the page you write and then look at.
+    </blockquote>
+
+    <p class="no-indent">
+      There is also a discipline to it. Without strangers, you can't fake your own care. A page you'd be embarrassed to send a friend isn't going to fool the only person who'll ever load it — you. The result is that personal-lab work tends to be either obviously alive or obviously abandoned. The middle ground, the SaaS-tepid finish that satisfies a strategy doc, doesn't really apply.
+    </p>
+
+    <p>
+      The lab itself — this template, the thing you're inside — is meant to make that aliveness cheap. Adding a new page is one file. Adding a new app is one folder. Deleting either is the inverse. The infrastructure is a one-time decision that pays itself off across every small idea you'd otherwise not start because the setup was too much.
+    </p>
+
+    <hr class="rule" />
+
+    <p class="no-indent">
+      If you keep one thing from this essay, keep this: <em>the audience for your lab is you</em>. Build accordingly. Make the buttons feel right under your finger. Choose the typeface that makes you read more carefully. Use the accent color that you actually like, not the one that's safest for conversion. Strangers will not arrive. That is the point.
+    </p>
+
+    <span class="endmark">— end</span>
+  </article>
+
+  <footer class="footer">
+    pages/essay.html · register: <a href="https://github.com/z333d/personal-lab/blob/main/design-patterns.md#1-essay">Essay</a> · <a href="/">back to lab</a>
+  </footer>
+</body>
+</html>

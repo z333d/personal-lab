@@ -1,0 +1,224 @@
+<!doctype html>
+<!-- lab-example -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>A card for you · welcome to your lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;600&family=Inter:wght@400;500&display=swap"
+  />
+  <style>
+    /* POSTCARD register · See ./design-patterns.md
+       A printed card you'd send by mail, rendered for the web.
+       Centered card on a darker mat. Ornamental palette + display serif. */
+    :root {
+      --mat: #c8786b;
+      --card: #faf2dc;
+      --ink: #2c1d18;
+      --ink-soft: #6e564a;
+      --gold: #b58339;
+      --sage: #8a9171;
+      --rule: #b58339;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      background: var(--mat);
+      background-image:
+        radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.08), transparent 60%),
+        radial-gradient(ellipse at 80% 90%, rgba(0,0,0,.06), transparent 60%);
+      min-height: 100vh;
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(20px, 5vw, 60px);
+    }
+
+    .card {
+      background: var(--card);
+      width: 100%;
+      max-width: 580px;
+      padding: clamp(40px, 7vw, 64px) clamp(28px, 6vw, 56px);
+      position: relative;
+      box-shadow:
+        0 1px 0 rgba(0,0,0,.08),
+        0 16px 40px -12px rgba(0,0,0,.35),
+        inset 0 0 0 1px rgba(255,255,255,.4);
+      /* Subtle paper grain via overlapping background-image trickery */
+    }
+    .card::before, .card::after {
+      content: '';
+      position: absolute;
+      inset: 14px;
+      pointer-events: none;
+    }
+    .card::before {
+      border: 1px solid var(--gold);
+    }
+    .card::after {
+      border: 1px solid var(--gold);
+      inset: 18px;
+      opacity: 0.4;
+    }
+
+    .stamp {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      width: 64px;
+      height: 78px;
+      border: 1.5px solid var(--gold);
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transform: rotate(3deg);
+      gap: 4px;
+    }
+    .stamp .stamp-number {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1;
+    }
+    .stamp .stamp-label {
+      font-size: 8px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .kicker {
+      text-align: center;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      font-size: 11px;
+      color: var(--gold);
+      margin: 0 0 14px;
+    }
+
+    h1 {
+      text-align: center;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(36px, 7vw, 56px);
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      margin: 0 0 12px;
+    }
+    h1 em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .subtitle {
+      text-align: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 17px;
+      color: var(--ink-soft);
+      margin: 0 0 28px;
+    }
+
+    .flourish {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 22px 0 28px;
+      color: var(--gold);
+    }
+    .flourish::before, .flourish::after {
+      content: '';
+      flex: 0 0 56px;
+      height: 1px;
+      background: currentColor;
+      opacity: 0.6;
+    }
+    .flourish span { font-size: 16px; line-height: 1; }
+
+    .body {
+      font-size: 15px;
+      line-height: 1.65;
+      text-align: center;
+      max-width: 38ch;
+      margin: 0 auto;
+      color: var(--ink);
+    }
+    .body + .body { margin-top: 14px; }
+
+    .signature {
+      margin-top: 36px;
+      text-align: center;
+    }
+    .signature .label {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-bottom: 8px;
+    }
+    .signature .scrawl {
+      font-family: 'Caveat', cursive;
+      font-size: 32px;
+      color: var(--sage);
+      line-height: 1;
+    }
+
+    .return-link {
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 1px dashed rgba(45,29,24,.18);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--ink-soft);
+    }
+    .return-link a { color: var(--ink); text-decoration: none; border-bottom: 1px solid currentColor; }
+  </style>
+</head>
+<body>
+  <article class="card">
+    <div class="stamp" aria-hidden="true">
+      <span class="stamp-number">01</span>
+      <span class="stamp-label">lab</span>
+    </div>
+
+    <p class="kicker">A card for you</p>
+    <h1>Welcome to your <em>lab</em></h1>
+    <p class="subtitle">a quiet place to make small things</p>
+
+    <div class="flourish" aria-hidden="true">
+      <span>✦ ❦ ✦</span>
+    </div>
+
+    <p class="body">
+      This file is one of the starter examples that ship with a fresh lab — a postcard sent from the template to the person opening the door.
+    </p>
+    <p class="body">
+      Adding a new page is one file in <code style="font-family:'Cormorant Garamond',serif;font-style:italic;">pages/</code>. Adding a new app is one folder in <code style="font-family:'Cormorant Garamond',serif;font-style:italic;">apps/</code>. Deleting either is the inverse. The lab keeps as much of itself as you decide is worth keeping.
+    </p>
+    <p class="body">
+      When the postcard's job is done, send it on its way: <code style="font-family:'Cormorant Garamond',serif;font-style:italic;">pnpm scaffold rm postcard</code>.
+    </p>
+
+    <div class="signature">
+      <div class="label">From the template, with love</div>
+      <div class="scrawl">— P.L.</div>
+    </div>
+
+    <div class="return-link">
+      <a href="/">← back to lab</a>
+    </div>
+  </article>
+</body>
+</html>

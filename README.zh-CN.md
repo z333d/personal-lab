@@ -200,11 +200,24 @@ pnpm scaffold r2 <bucket>
 
 ## 内置示范
 
-- **`apps/todo/`** — 全栈应用，Notebook register（暖米色、衬线、安静的个人工具）
-- **`apps/counter/`** — 静态应用，Terminal register（等宽字体、深色、紧凑）
-- **`pages/welcome.html`** — 示范 HTML 页面
+新建的 lab 自带 2 个示范应用 + 6 个 HTML 页面（[design-patterns.md](./design-patterns.md) 里 7 个 register 各一个）—— 第一眼打开 lab landing 就能看到"你的 lab 可以长成什么样"：
 
-这是 agent 和你拿不准时可以直接看的工作样本。
+- **`apps/todo/`** — 全栈应用，**Notebook** register（暖米色、衬线、安静的个人工具）
+- **`apps/counter/`** — 静态应用，**Terminal** register（等宽字体、深色、紧凑）
+- **`pages/essay.html`** — **Essay** register（单栏、纸感衬线、为长阅读优化）
+- **`pages/sketchnote.html`** — **Sketchnote** register（手做感、胶带、批注）
+- **`pages/postcard.html`** — **Postcard** register（居中卡片、装饰性、特殊场合）
+- **`pages/manifesto.html`** — **Manifesto** register（满版色块、condensed 大字、一屏一个论点）
+- **`pages/playful.html`** — **Neo-Memphis Playful** register（米黄底 + 饱和色块 + 胶带/贴纸）
+- **`pages/welcome.html`** — Notebook 风格的简短欢迎页
+
+6 个 page 在 landing 上会被打上 *starter example* 标记。不想要的删掉：
+
+```bash
+pnpm scaffold rm essay
+pnpm scaffold rm sketchnote
+# 等等
+```
 
 ---
 

@@ -235,7 +235,15 @@ A `pages/<slug>.html` is a single self-contained file with no build pipeline —
 - (a) Stays brand-neutral with inline system styling (the default the scaffolder writes), or
 - (b) Inlines its own brand via a `<style>` block. In that case, the page can carry whatever vibe fits the content; you don't have to match any sibling app or the lab index.
 
-`pages/welcome.html` is a sample showing option (b) — it picks a notebook register because that fits *its* content. Don't read it as a default for new pages.
+`pages/welcome.html` plus `essay.html` / `sketchnote.html` / `postcard.html` / `manifesto.html` / `playful.html` are starter examples that ship with a fresh lab — one HTML page per design register from [`design-patterns.md`](./design-patterns.md). Each is tagged on the landing with a `starter example` badge so the user knows they're safe to `pnpm scaffold rm` once they don't want them. The tagging convention is an HTML comment near the top of the file:
+
+```html
+<!doctype html>
+<!-- lab-example -->
+<html ...>
+```
+
+`scripts/build-lab.mjs` greps for that comment during `discoverPages()` and renders the badge.
 
 ---
 

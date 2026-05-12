@@ -1,0 +1,131 @@
+<!doctype html>
+<!-- lab-example -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>The personal lab manifesto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+  />
+  <style>
+    /* MANIFESTO register · See ./design-patterns.md
+       Huge condensed display + full-bleed color blocks. One thesis per screen.
+       Anton substitutes for Druk/Tungsten (free, similar gestalt).        */
+    :root {
+      --cream: #f4ecd8;
+      --ink: #15110a;
+      --red: #e63946;
+      --yellow: #fcc419;
+      --green: #2f9e44;
+      --blue: #1971c2;
+      --label-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --display: 'Anton', 'Druk Wide', 'Inter Display', 'Bebas Neue', 'Helvetica Neue', sans-serif;
+      --body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: var(--body); background: var(--cream); color: var(--ink); }
+    section {
+      min-height: 100vh;
+      padding: clamp(64px, 12vh, 128px) clamp(24px, 6vw, 80px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .label {
+      font-family: var(--label-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 500;
+      opacity: 0.65;
+    }
+    .headline {
+      font-family: var(--display);
+      font-size: clamp(56px, 14vw, 184px);
+      line-height: 0.88;
+      letter-spacing: -0.012em;
+      text-transform: uppercase;
+      font-weight: 400;
+      margin: 0;
+      max-width: 14ch;
+    }
+    .body {
+      max-width: 32em;
+      font-size: clamp(16px, 1.6vw, 19px);
+      line-height: 1.55;
+    }
+    .body strong { font-weight: 600; }
+
+    /* Per-section palettes */
+    .s-cream { background: var(--cream); color: var(--ink); }
+    .s-red   { background: var(--red);   color: var(--cream); }
+    .s-yellow{ background: var(--yellow);color: var(--ink); }
+    .s-ink   { background: var(--ink);   color: var(--cream); }
+    .s-blue  { background: var(--blue);  color: var(--cream); }
+
+    /* The accent word in each headline */
+    .accent-red { color: var(--red); }
+    .accent-yellow { color: var(--yellow); }
+    .accent-blue { color: var(--blue); }
+    .accent-green { color: var(--green); }
+    .accent-cream { color: var(--cream); }
+
+    .footer {
+      padding: 24px clamp(24px, 6vw, 80px);
+      background: var(--ink);
+      color: var(--cream);
+      font-family: var(--label-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer a { color: var(--cream); text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+  <section class="s-cream">
+    <p class="label">01 — The premise</p>
+    <h2 class="headline">Your software should be made <span class="accent-red">for you</span>.</h2>
+    <p class="body">Not for the median user. Not for the segment most likely to convert. Not for the persona that came out of last quarter's research. <strong>For you.</strong> The person who will open this thing tomorrow morning and use it.</p>
+  </section>
+
+  <section class="s-red">
+    <p class="label">02 — The problem</p>
+    <h2 class="headline">Most software is made for <span class="accent-yellow">someone else</span>.</h2>
+    <p class="body">For investors, for retention curves, for support deflection, for partner integrations, for the launch deck. By the time it reaches you it has been compromised by every audience it serves except yours.</p>
+  </section>
+
+  <section class="s-yellow">
+    <p class="label">03 — The wager</p>
+    <h2 class="headline">An audience of one is <span class="accent-red">liberating</span>.</h2>
+    <p class="body">No growth target. No SLA. No ten-thousand-person median to optimize against. The cost of starting is one folder. The cost of quitting is one <code style="font-family:var(--label-mono);background:rgba(0,0,0,.06);padding:1px 6px;border-radius:3px;">rm -rf</code>. You can finally build the version of the thing that's exactly right.</p>
+  </section>
+
+  <section class="s-ink">
+    <p class="label">04 — The practice</p>
+    <h2 class="headline">Build the <span class="accent-yellow">one</span> version that fits.</h2>
+    <p class="body">The to-do app that reads better at night. The drinking-water tracker that nags in your own voice. The reading list ordered the way you actually pick books off the shelf. None of them venture-fundable. All of them achievable in an afternoon.</p>
+  </section>
+
+  <section class="s-blue">
+    <p class="label">05 — The invitation</p>
+    <h2 class="headline">Start <span class="accent-yellow">here</span>.</h2>
+    <p class="body">This page lives in a personal lab. Adding a new page is one file. Adding a new app is one folder. Deleting either is the inverse. The infrastructure paid itself off the moment you stopped not-starting things.</p>
+  </section>
+
+  <footer class="footer">
+    <span>pages/manifesto.html · register: manifesto</span>
+    <a href="/">← back to lab</a>
+  </footer>
+</body>
+</html>
