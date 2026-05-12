@@ -23,6 +23,11 @@
   },
   "packageManager": "pnpm@10.0.0",
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ],
     "peerDependencyRules": {
       "allowedVersions": {
         "@json-render/ink>ink": "7",

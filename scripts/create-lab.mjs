@@ -300,9 +300,13 @@ log(`  URL:    ${finalUrl}`);
 log('');
 log('Next steps:');
 log(`  cd ${labDir}`);
-log('  pnpm dev                # local dev (root + each fullstack app)');
-log('  pnpm scaffold app foo   # add a new static app');
-log('  pnpm scaffold app bar --fullstack   # add a new fullstack app');
+log('  pnpm scaffold page foo                      # add an HTML page');
+log('  pnpm scaffold app foo                       # add a static React app');
+log('  pnpm scaffold app foo --fullstack --deploy  # add a fullstack app (one command, end-to-end)');
+log('  pnpm scaffold rm foo                        # remove any of the above');
+log('  pnpm dev                                    # local dev (root + each fullstack app)');
+log('');
+log('Each scaffold accepts --deploy to ship immediately; without it, run `pnpm deploy:all` later.');
 log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
 // ════════════════════════════════════════════════════════════════

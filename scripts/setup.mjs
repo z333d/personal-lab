@@ -134,7 +134,8 @@ fs.chmodSync(CONFIG_PATH, 0o600);
 console.log('');
 ok(`Config saved to ${CONFIG_PATH}`);
 console.log('');
-console.log('Next: ask the assistant — "建个 lab 叫 my-test-lab"');
-console.log('     or run: node ' + path.basename(import.meta.url.replace(/setup\.mjs$/, 'create-lab.mjs')) + ' my-test-lab');
+console.log('Next: create a lab with');
+console.log('  node scripts/create-lab.mjs <lab-name>');
+console.log('Run it as many times as you like — each invocation makes an independent lab.');
 
 rl?.close();
