@@ -96,7 +96,9 @@ apps/<slug>/
 
 ### Lifecycle for a brand-new fullstack app
 
-`pnpm scaffold app <slug> --fullstack` writes the folder + pnpm-installs, but does **not** touch Cloudflare. Before the new app can be reached, you (or the agent) must:
+**The easy path** — `pnpm scaffold app <slug> --fullstack --deploy` does everything in one command: scaffolds the folder, provisions a new D1, applies the auth-only initial migration, sets BETTER_AUTH_SECRET / BETTER_AUTH_URL on Cloudflare, writes a local `.dev.vars` with a *separate* dev secret, then `pnpm build && pnpm deploy:all`. Re-running is safe (D1 lookups + migration applies + secret puts are all idempotent). Use this unless you specifically need to inspect intermediate state.
+
+**The manual path** — `pnpm scaffold app <slug> --fullstack` writes the folder + pnpm-installs, but does **not** touch Cloudflare. Before the new app can be reached, you (or the agent) must:
 
 ```bash
 # 1. provision its D1 (the scaffold leaves a __D1_<SLUG>_ID__ placeholder)

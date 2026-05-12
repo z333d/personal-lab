@@ -117,10 +117,18 @@ pnpm build && pnpm deploy:root
 # live at /apps/<slug>/
 ```
 
-**Add a full-stack app** — ~10 minutes (the one path that needs manual Cloudflare steps)
+**Add a full-stack app** — one command end-to-end with `--deploy`
 
 ```bash
-pnpm scaffold app <slug> --fullstack
+pnpm scaffold app <slug> --fullstack --deploy
+# scaffold + D1 create + migration + secrets + .dev.vars + build + deploy
+# live at /apps/<slug>/ when the command returns. Idempotent on rerun.
+```
+
+If you'd rather do each step yourself (to inspect intermediate state, or because you don't want the scaffold to provision Cloudflare resources for you):
+
+```bash
+pnpm scaffold app <slug> --fullstack       # without --deploy
 
 # 1. provision D1
 npx wrangler d1 create <lab-name>-<slug>
@@ -129,8 +137,6 @@ npx wrangler d1 create <lab-name>-<slug>
 # 2. apply the auth-only initial migration
 cd apps/<slug>
 pnpm db:migrate:remote
-# (idempotent — re-running is safe; subsequent `pnpm db:generate`
-# + `pnpm deploy:all` automatically applies new migrations.)
 
 # 3. set the two production secrets
 echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
@@ -138,13 +144,12 @@ echo -n "https://<lab-name>.<your-domain>" | npx wrangler secret put BETTER_AUTH
 
 # 4. (optional) set up .dev.vars so `pnpm dev` works locally
 cp .dev.vars.example .dev.vars
-# edit .dev.vars: paste a random BETTER_AUTH_SECRET (any value, just for local)
-# BETTER_AUTH_URL=http://localhost:8787 is fine for wrangler dev
+# edit .dev.vars and paste any random BETTER_AUTH_SECRET; the
+# BETTER_AUTH_URL=http://localhost:8787 default is fine
 
 # 5. deploy
 cd ../..
 pnpm build && pnpm deploy:all
-# live at /apps/<slug>/
 ```
 
 **Local development**

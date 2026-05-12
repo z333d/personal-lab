@@ -117,10 +117,18 @@ pnpm build && pnpm deploy:root
 # 上线在 /apps/<slug>/
 ```
 
-**加全栈应用** — ~10 分钟（唯一一条需要手动跑 Cloudflare 步骤的路径）
+**加全栈应用** — 一条命令端到端，用 `--deploy`
 
 ```bash
-pnpm scaffold app <slug> --fullstack
+pnpm scaffold app <slug> --fullstack --deploy
+# scaffold + 建 D1 + 迁移 + secrets + .dev.vars + build + 部署
+# 命令返回时已经上线在 /apps/<slug>/。重跑安全（幂等）。
+```
+
+如果想分步做（为了观察中间状态，或者不希望 scaffold 替你动 Cloudflare 资源）：
+
+```bash
+pnpm scaffold app <slug> --fullstack       # 不加 --deploy
 
 # 1. 创建 D1
 npx wrangler d1 create <lab-name>-<slug>
@@ -129,8 +137,6 @@ npx wrangler d1 create <lab-name>-<slug>
 # 2. 应用 auth-only 初始迁移
 cd apps/<slug>
 pnpm db:migrate:remote
-# （幂等 —— 重复跑安全；之后 `pnpm db:generate` + `pnpm deploy:all`
-# 会自动 apply 新生成的 migration）
 
 # 3. 设两个生产环境 secrets
 echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
@@ -144,7 +150,6 @@ cp .dev.vars.example .dev.vars
 # 5. 部署
 cd ../..
 pnpm build && pnpm deploy:all
-# 上线在 /apps/<slug>/
 ```
 
 **本地开发**

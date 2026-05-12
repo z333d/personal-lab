@@ -6,15 +6,21 @@
  *   node scripts/scaffold.mjs page <slug>                   - create pages/<slug>.html
  *   node scripts/scaffold.mjs app  <slug>                   - create apps/<slug>/ (static React)
  *   node scripts/scaffold.mjs app  <slug> --fullstack       - create apps/<slug>/ (fullstack)
+ *   node scripts/scaffold.mjs app  <slug> --fullstack --deploy
+ *                                                            - scaffold + provision D1
+ *                                                              + migration + secrets + deploy
  *
  * Static apps copy from apps/counter/. Fullstack apps copy from apps/todo/.
- * After running, you'll need to commit the new files. Deployment happens on
- * the next `git push` (or `pnpm deploy:all`).
+ * Without --deploy you'll need to commit + run the deploy lifecycle manually
+ * (see README "Day-to-day usage"). With --deploy the new app is live when the
+ * command returns.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LAB_ROOT = path.resolve(__dirname, '..');
@@ -39,6 +45,8 @@ if (!/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) {
   process.exit(1);
 }
 
+const wantsDeploy = flags.has('--deploy');
+
 if (kind === 'page') {
   const target = path.join(LAB_ROOT, 'pages', `${slug}.html`);
   if (fs.existsSync(target)) {
@@ -47,7 +55,12 @@ if (kind === 'page') {
   }
   fs.writeFileSync(target, htmlPageTemplate(slug));
   console.log(`✓ Created ${path.relative(LAB_ROOT, target)}`);
-  console.log(`  Edit it, then commit. Live at /pages/${slug}.html after push.`);
+  if (wantsDeploy) {
+    deployRootBundle();
+    console.log(`  Live at /pages/${slug}.html`);
+  } else {
+    console.log(`  Edit it, then commit. Live at /pages/${slug}.html after push.`);
+  }
   process.exit(0);
 }
 
@@ -133,17 +146,161 @@ console.log(`✓ Created apps/${slug}/`);
 console.log(`  Brand surfaces neutralized — DESIGN.md is a placeholder.`);
 console.log(`  Before building UI, ask the user what vibe (editorial / playful / utilitarian / dark / etc.)`);
 console.log(`  and rewrite DESIGN.md, then \`pnpm theme:gen\` to refresh tokens.`);
-if (fullstack) {
-  console.log(`\nFullstack apps need a per-app D1 + secrets before they can deploy. From the lab root:`);
-  console.log(`  npx wrangler d1 create <lab>-${slug}`);
-  console.log(`  → paste the returned database_id into apps/${slug}/wrangler.jsonc`);
-  console.log(`  cd apps/${slug} && pnpm db:migrate:remote`);
-  console.log(`  echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET`);
-  console.log(`  echo -n "https://<lab>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL`);
-  console.log(`  cp .dev.vars.example .dev.vars  # optional; needed only for \`pnpm dev\` local auth`);
-  console.log(`  cd ../.. && pnpm build && pnpm deploy:all`);
+
+if (wantsDeploy) {
+  if (fullstack) {
+    deployFullstackApp(slug);
+  } else {
+    deployRootBundle();
+    console.log(`  Live at /apps/${slug}/`);
+  }
+} else if (fullstack) {
+  console.log(`\nFullstack apps need a per-app D1 + secrets before they can deploy. Either:`);
+  console.log(`  • Re-run with --deploy: \`pnpm scaffold app ${slug} --fullstack --deploy\``);
+  console.log(`  • Or do it by hand:`);
+  console.log(`      npx wrangler d1 create <lab>-${slug}`);
+  console.log(`      → paste the returned database_id into apps/${slug}/wrangler.jsonc`);
+  console.log(`      cd apps/${slug} && pnpm db:migrate:remote`);
+  console.log(`      echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET`);
+  console.log(`      echo -n "https://<lab>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL`);
+  console.log(`      cp .dev.vars.example .dev.vars  # optional; only for local \`pnpm dev\` auth`);
+  console.log(`      cd ../.. && pnpm build && pnpm deploy:all`);
 } else {
-  console.log(`\nNext: edit apps/${slug}/src/App.tsx, then \`git push\` (or \`pnpm deploy:all\`) to deploy.`);
+  console.log(`\nNext: edit apps/${slug}/src/App.tsx, then \`pnpm deploy:root\` (or \`--deploy\` next time).`);
+}
+
+// ────────── --deploy helpers ──────────
+
+function run(cmd, args, opts = {}) {
+  const r = spawnSync(cmd, args, { stdio: 'inherit', ...opts });
+  if (r.status !== 0) {
+    throw new Error(`Command failed: ${cmd} ${args.join(' ')}`);
+  }
+  return r;
+}
+
+function readLabName() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(LAB_ROOT, 'package.json'), 'utf8'));
+  return pkg.name;
+}
+
+function readUserConfig() {
+  const primary = path.join(os.homedir(), '.config', 'personal-lab', 'config.json');
+  const legacy = path.join(os.homedir(), '.config', 'create-pages-site', 'config.json');
+  for (const p of [primary, legacy]) {
+    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8'));
+  }
+  throw new Error(
+    `No user config found at ${primary}. Run \`node scripts/setup.mjs\` first.`,
+  );
+}
+
+function computeLabBaseUrl(labName, cfg) {
+  // Prefer the route declared in server/wrangler.jsonc (template — has the
+  // canonical lab URL the user picked). Falls back to workers.dev pattern.
+  const rootWf = path.join(LAB_ROOT, 'server', 'wrangler.jsonc');
+  if (fs.existsSync(rootWf)) {
+    const text = fs.readFileSync(rootWf, 'utf8');
+    // routes was already substituted by create-lab.mjs at lab creation time.
+    // Look for `"pattern": "<domain>"` (custom_domain: true case).
+    const m = text.match(/"pattern":\s*"([^"\/]+)"/);
+    if (m) return `https://${m[1]}`;
+  }
+  const accountSub = cfg.cloudflareEmail?.split('@')[0] || 'account';
+  return `https://${labName}.${accountSub}.workers.dev`;
+}
+
+function findExistingD1Id(cwd, dbName) {
+  const r = spawnSync('npx', ['wrangler', 'd1', 'list', '--json'], {
+    cwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (r.status === 0) {
+    try {
+      const list = JSON.parse(r.stdout.toString());
+      const found = list.find((d) => d.name === dbName);
+      if (found) return found.uuid;
+    } catch { /* fall through */ }
+  }
+  return null;
+}
+
+function setSecret(cwd, name, value) {
+  const r = spawnSync('npx', ['wrangler', 'secret', 'put', name], {
+    cwd,
+    input: value,
+    stdio: ['pipe', 'inherit', 'inherit'],
+  });
+  if (r.status !== 0) throw new Error(`wrangler secret put ${name} failed`);
+}
+
+function deployRootBundle() {
+  console.log(`\nBuilding + deploying root Worker...`);
+  run('pnpm', ['build'], { cwd: LAB_ROOT });
+  run('pnpm', ['deploy:root'], { cwd: LAB_ROOT });
+}
+
+function deployFullstackApp(slug) {
+  const appDir = path.join(LAB_ROOT, 'apps', slug);
+  const labName = readLabName();
+  const cfg = readUserConfig();
+  const labBaseUrl = computeLabBaseUrl(labName, cfg);
+  const dbName = `${labName}-${slug}`;
+  const placeholder = `__D1_${slug.toUpperCase().replace(/-/g, '_')}_ID__`;
+  const wranglerPath = path.join(appDir, 'wrangler.jsonc');
+
+  // 1. Create or find D1
+  console.log(`\n▸ Provisioning D1 ${dbName}`);
+  let dbId = findExistingD1Id(LAB_ROOT, dbName);
+  if (!dbId) {
+    const r = spawnSync('npx', ['wrangler', 'd1', 'create', dbName], {
+      cwd: appDir,
+      stdio: ['ignore', 'pipe', 'inherit'],
+    });
+    const out = r.stdout.toString();
+    if (r.status !== 0) throw new Error(`wrangler d1 create failed:\n${out}`);
+    const m = out.match(/database_id\s*=\s*"([^"]+)"|"database_id":\s*"([^"]+)"/);
+    dbId = m ? (m[1] || m[2]) : findExistingD1Id(LAB_ROOT, dbName);
+    if (!dbId) throw new Error(`Could not extract database_id for ${dbName}:\n${out}`);
+    console.log(`  created (id=${dbId})`);
+  } else {
+    console.log(`  reusing existing D1 (id=${dbId})`);
+  }
+
+  // 2. Substitute the placeholder in wrangler.jsonc (idempotent)
+  const wText = fs.readFileSync(wranglerPath, 'utf8');
+  if (wText.includes(placeholder)) {
+    fs.writeFileSync(wranglerPath, wText.split(placeholder).join(dbId));
+    console.log(`  wrote database_id into apps/${slug}/wrangler.jsonc`);
+  }
+
+  // 3. Apply migrations
+  console.log(`\n▸ Applying migrations`);
+  run('npx', ['wrangler', 'd1', 'migrations', 'apply', 'DB', '--remote'], { cwd: appDir });
+
+  // 4. Set production secrets (wrangler auto-creates an empty Worker if needed)
+  console.log(`\n▸ Setting production secrets`);
+  const prodSecret = randomBytes(48).toString('base64url');
+  setSecret(appDir, 'BETTER_AUTH_SECRET', prodSecret);
+  setSecret(appDir, 'BETTER_AUTH_URL', labBaseUrl);
+
+  // 5. Write .dev.vars for local dev (different secret from prod)
+  const devVarsPath = path.join(appDir, '.dev.vars');
+  if (!fs.existsSync(devVarsPath)) {
+    const devSecret = randomBytes(48).toString('base64url');
+    fs.writeFileSync(
+      devVarsPath,
+      `BETTER_AUTH_SECRET=${devSecret}\nBETTER_AUTH_URL=http://localhost:8787\n`,
+    );
+    console.log(`  wrote apps/${slug}/.dev.vars (local-dev secret, separate from prod)`);
+  }
+
+  // 6. Build + deploy everything
+  console.log(`\n▸ Build + deploy`);
+  run('pnpm', ['build'], { cwd: LAB_ROOT });
+  run('pnpm', ['deploy:all'], { cwd: LAB_ROOT });
+
+  console.log(`\n✨ ${slug} is live at ${labBaseUrl}/apps/${slug}/`);
 }
 
 // ────────── Helpers ──────────
