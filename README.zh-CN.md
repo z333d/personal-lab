@@ -2,9 +2,11 @@
 
 [English](./README.md) · **简体中文**
 
-一个用来搭建**个人"实验室"（lab）**的模板：在一个 Cloudflare Workers 子域名下，平铺式地托管 HTML 页面、静态 React 应用、和全栈 React + D1 应用。
+一个用来搭建**个人"实验室"（lab）**的模板 —— 每个 lab 是一个独立空间，在一个 Cloudflare Workers 子域名下平铺托管 HTML 页面、静态 React 应用、全栈 React + D1 应用。
 
-一个仓库、一个 Cloudflare 账号、一个子域名。加一个新页面或新应用只需写一个文件或一个文件夹 —— 不用碰任何基础设施。便宜地新增、便宜地删除、应用长大了也能便宜地"毕业"出去独立部署。
+你只需要 clone 这个模板**一次**，留在硬盘上。之后 `node scripts/create-lab.mjs <name>` 每跑一次就生成一个**独立的 lab**（独立 GitHub repo、独立 Cloudflare Worker、独立子域名）。想建几个就建几个 —— `personal-blog`、`internal-tools`、`gift-for-a-friend` 各自一片天地。唯一共享的是你的 Cloudflare 账号额度（免费层 100 Workers + 10 D1，个人用绰绰有余）和 GitHub 账号。
+
+进入一个 lab 之后，加一个新页面或新应用只需写一个文件或一个文件夹 —— 不用碰基础设施。便宜地新增、便宜地删除，应用长大了也能便宜地"毕业"出去独立部署。
 
 ---
 

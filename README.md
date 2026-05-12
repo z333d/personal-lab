@@ -2,9 +2,11 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-A template for **personal "labs"** that host a flat directory of HTML pages, static React apps, and full-stack React+D1 apps under a single Cloudflare Workers domain.
+A template for **personal "labs"** — each lab hosts a flat directory of HTML pages, static React apps, and full-stack React+D1 apps under a single Cloudflare Workers domain.
 
-One repo, one Cloudflare account, one subdomain. Add a new page or app by writing one file or one folder — no infra fiddling. Cheap to add, cheap to delete, cheap to graduate when something outgrows the lab.
+You clone this template **once** and keep it on disk. From there, `node scripts/create-lab.mjs <name>` produces an **independent lab** (its own GitHub repo, its own Cloudflare Worker, its own subdomain). Make as many labs as you want — `personal-blog`, `internal-tools`, `gift-for-a-friend`. Each is a self-contained universe; the only shared things are your Cloudflare account quota (100 Workers + 10 D1 databases on the free tier — generous for personal use) and your GitHub org.
+
+Inside a lab, adding a new page or app is one file or one folder — no infra fiddling. Cheap to add, cheap to delete, cheap to graduate when something outgrows its lab.
 
 ---
 
