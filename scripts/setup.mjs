@@ -100,8 +100,9 @@ ok(`wrangler logged in as ${email}`);
 // and just ask the user for default domain (or empty for workers.dev).
 console.log('');
 console.log('  Choose your default lab URL pattern:');
-console.log('    1. <lab>.<your-cloudflare-zone>     (e.g. my-app.example.com)');
-console.log('    2. <lab>.<account>.workers.dev      (Cloudflare free subdomain, zero setup)');
+console.log('    1. <lab>.<your-cloudflare-zone>     (e.g. my-app.example.com — needs a Cloudflare-managed DNS zone)');
+console.log('    2. <lab>.<account>.workers.dev      (Cloudflare free subdomain; <account> is your Workers subdomain at');
+console.log('                                         dash.cloudflare.com → Workers & Pages → Subdomain)');
 const zoneChoice = await ask('  >', existing.defaultZone ? '1' : '2');
 
 let defaultZone = '';

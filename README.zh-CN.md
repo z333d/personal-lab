@@ -4,7 +4,7 @@
 
 一个用来搭建**个人"实验室"（lab）**的模板 —— 每个 lab 是一个独立空间，在一个 Cloudflare Workers 子域名下平铺托管 HTML 页面、静态 React 应用、全栈 React + D1 应用。
 
-你只需要 clone 这个模板**一次**，留在硬盘上。之后 `node scripts/create-lab.mjs <name>` 每跑一次就生成一个**独立的 lab**（独立 GitHub repo、独立 Cloudflare Worker、独立子域名）。想建几个就建几个 —— `personal-blog`、`internal-tools`、`gift-for-a-friend` 各自一片天地。唯一共享的是你的 Cloudflare 账号额度（免费层 100 Workers + 10 D1，个人用绰绰有余）和 GitHub 账号。
+你只需要 clone 这个模板**一次**，留在硬盘上。之后 `node scripts/create-lab.mjs <name>` 每跑一次就生成一个**独立的 lab**（独立 GitHub repo、独立 Cloudflare Worker、独立子域名）。想建几个就建几个 —— `personal-blog`、`internal-tools`、`gift-for-a-friend` 各自一片天地。唯一共享的是你的 Cloudflare 账号额度和 GitHub 账号。
 
 进入一个 lab 之后，加一个新页面或新应用只需写一个文件或一个文件夹 —— 不用碰基础设施。便宜地新增、便宜地删除，应用长大了也能便宜地"毕业"出去独立部署。
 
@@ -14,13 +14,13 @@
 
 | 类型 | 放在哪 | URL | 由谁托管 |
 |---|---|---|---|
-| HTML 页面 | `pages/<slug>.html` | `/<slug>.html` 或 `/pages/<slug>.html` | root Worker |
-| 静态 React 应用 | `apps/<slug>/` | `/apps/<slug>/` | root Worker |
-| 全栈应用（登录 + 数据库） | `apps/<slug>/` 且 `lab.fullstack: true` | `/apps/<slug>/*` | 自己的 Worker、自己的 D1、自己的 Better Auth 域 |
+| HTML 页面 | `pages/<slug>.html` | `/<slug>.html` 或 `/pages/<slug>.html` | 共享 root Worker |
+| 静态 React 应用 | `apps/<slug>/` | `/apps/<slug>/` | 共享 root Worker |
+| 全栈应用（带登录 + 数据库） | `apps/<slug>/` 且 `lab.fullstack: true` | `/apps/<slug>/*` | 独占的 Worker + 独占 SQLite 数据库 + 独占登录域 |
 
-所有 URL 都在同一个主机名下。`/apps/<slug>/*` 的分发对应用来说是透明的：自定义域名走 Cloudflare Workers Routes，workers.dev 走 Service Bindings。
+所有 URL 都在同一个主机名下。`/apps/<slug>/*` 到独占 Worker 的分发对应用来说是透明的（自定义域名走 Cloudflare Workers Routes，workers.dev 走 Service Bindings）。
 
-每个全栈应用的技术栈：Vite + React 19、Workers 上跑 Hono、D1 上跑 Drizzle、Better Auth（用了自定义的 PBKDF2 哈希，能放进免费版 10ms CPU 限制里）、Tailwind v4 + 消费 `DESIGN.md` 品牌 token 的 shadcn 基础组件。
+**每个全栈应用的技术栈**：Vite + React 19（前端）、Cloudflare Workers 上的 Hono（后端）、Cloudflare D1（serverless SQLite）上的 [Drizzle](https://orm.drizzle.team/) ORM、[Better Auth](https://www.better-auth.com/) 处理注册/登录/会话（用了自定义的 PBKDF2 哈希，能放进 Workers 免费层 10ms CPU 限制里）、Tailwind v4 + 消费 `DESIGN.md` 品牌 token 的 shadcn 基础组件。
 
 ---
 
@@ -72,8 +72,10 @@ node scripts/setup.mjs       # 写 ~/.config/personal-lab/config.json
 `setup.mjs` 问你三件事，每件都有合理的默认值：
 
 1. **GitHub 账号 / org** —— 新 lab repo 创建在哪个账号下（默认你的 `gh` 登录账号）
-2. **URL 模式** —— 用 `<lab>.<你的域名>`（需要一个由 Cloudflare 托管的 zone）或 `<lab>.<account>.workers.dev`
+2. **URL 模式** —— 用 `<lab>.<你的域名>`（需要一个由 Cloudflare DNS 托管的 zone）或 `<lab>.<account>.workers.dev`。`<account>` 是你 Cloudflare 账号的 Workers 子域名（在 `dash.cloudflare.com → Workers & Pages → Subdomain` 看，默认是你账号名）
 3. **新 lab 放在硬盘哪个目录** —— 例如 `~/projects/playground`
+
+> ⚠️ **模板本身不能直接运行。** `apps/todo/wrangler.jsonc` 等文件里有占位符字符串（`__LAB_NAME__`、`__APP_TODO_ROUTES__` 等），只有 `create-lab.mjs` 生成真实 lab 时才会被替换。**不要**在这个 clone 的模板目录里跑 `pnpm dev` 或 `pnpm build` —— 在下一步生成的 lab 目录里跑（脚本输出会告诉你它落在哪）。
 
 ---
 
@@ -220,6 +222,23 @@ pnpm scaffold rm essay
 pnpm scaffold rm sketchnote
 # 等等
 ```
+
+---
+
+## 故障排查（setup 阶段）
+
+下面这些是大家在 bootstrap 时真的会踩的坑。lab 内部的错误（`/apps/foo/` 404、auth 失败、service binding 找不到等）记录在 [AGENTS.md](./AGENTS.md#common-errors-and-fixes) 里。
+
+| 现象 | 原因 | 修法 |
+|---|---|---|
+| `pnpm install` 报 "build scripts ignored: esbuild, sharp, workerd" | pnpm 10 默认拦截 postinstall | workspace 根 `package.json` 已经在 `pnpm.onlyBuiltDependencies` 里放行这三个。如果你的 fork 没同步，从上游复制 `pnpm` 块过来。 |
+| `node scripts/setup.mjs` 在第二个问题挂死（stdin 是 pipe 时） | readline 跟非 TTY stdin 有已知冲突 | 已修（pipe 模式一次性读 stdin）。fork 老于 2026 年 5 月的同步一下补丁。 |
+| `create-lab.mjs` 在 "Create D1 database" 报 `Expected "routes" to be an array but got null` | wrangler 4 拒绝 `"routes": null` | 从上游同步 —— 老版本生成 `null`，新版本生成 `[]`。 |
+| `create-lab.mjs` 在 "Create D1 database" 报 `"zone_name": null` | 传了 `--domain my-lab.example.com` 但 config 里 `defaultZone: null` | 从上游同步 —— 现在会从 `--domain` 自动推 zone。 |
+| `gh repo create` 失败 `403` / `permissions` | `gh auth login` 没拿到 `repo` scope，或缺 `delete_repo` | `gh auth refresh -h github.com -s repo`（或 `-s delete_repo` 如果是清理失败）。 |
+| `wrangler login` 不开浏览器 | wrangler 太老 | `pnpm install` 会装 wrangler 4.x — 进项目目录里再试。 |
+| 在模板目录里跑 `pnpm dev` / `pnpm build` 报占位符错（`__LAB_NAME__`、`__APP_TODO_ROUTES__`） | 你在 *模板* clone 里跑命令，不是在生成的 lab 里 | 模板本身不可运行。先 `node scripts/create-lab.mjs <name>` 生成 lab，然后 `cd` 进去。 |
+| `wrangler whoami` 说 "not authenticated"，但刚 `wrangler login` 成功了 | wrangler 把 token 存在父进程的 HOME 下；`pnpm install` 可能跑在不同 HOME 里（macOS 很罕见） | 进项目目录，再跑一次 `npx wrangler login`。 |
 
 ---
 
