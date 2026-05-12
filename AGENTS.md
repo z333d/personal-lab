@@ -246,7 +246,15 @@ A `pages/<slug>.html` is a single self-contained file with no build pipeline —
 | `pages/<slug>-assets/` or `apps/<slug>/public/` | Small (< 1 MB), version with code | shipped via Workers Static Assets, free, automatic |
 | Cloudflare R2 bucket | Large (> 1 MB), or many of them | `https://<bucket>.r2.dev/...`; not in git |
 
-For now, R2 setup is manual. If you need it, ask the lab owner to run `pnpm scaffold r2 <bucket-name>`.
+Provision a bucket from the lab root:
+
+```bash
+pnpm scaffold r2 <bucket>
+# wrangler creates `<lab>-<bucket>` and prints the binding block to paste
+# into a fullstack app's wrangler.jsonc.
+```
+
+The scaffold deliberately does *not* edit any app's wrangler.jsonc — one bucket may be bound by multiple apps, or used purely as a public r2.dev origin without a binding at all. Decide which apps need the binding, paste the printed block into each. To make assets publicly readable without a binding, enable Public access on the bucket in the Cloudflare dashboard and reference the r2.dev URL directly.
 
 ---
 

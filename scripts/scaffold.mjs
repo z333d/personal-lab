@@ -37,9 +37,21 @@ if (!kind || !slug) {
   node scripts/scaffold.mjs app  <slug>                   # static React app
   node scripts/scaffold.mjs app  <slug> --fullstack       # fullstack app
   node scripts/scaffold.mjs app  <slug> --fullstack --deploy   # one-command create
+  node scripts/scaffold.mjs r2   <bucket>                 # provision a Cloudflare R2 bucket
   node scripts/scaffold.mjs rm   <slug> [--yes]           # remove a page / app (destructive)
 `);
   process.exit(1);
+}
+
+// r2 has its own slug rule (R2 accepts longer names and we don't ship the bucket
+// through pnpm workspaces, so we don't need the strict app-slug regex).
+if (kind === 'r2') {
+  if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(slug)) {
+    console.error('R2 bucket name must be 3–63 chars, lowercase alphanumeric or hyphen, not starting/ending with hyphen.');
+    process.exit(1);
+  }
+  await provisionR2Bucket(slug);
+  process.exit(0);
 }
 
 if (!/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) {
@@ -394,6 +406,55 @@ async function promptYesNo(question) {
   } finally {
     rl.close();
   }
+}
+
+// ────────── r2 helpers ──────────
+
+async function provisionR2Bucket(bucket) {
+  const labName = readLabName();
+  // Prefix the bucket with the lab name so multiple labs in one Cloudflare
+  // account don't collide on bucket names.
+  const fullName = `${labName}-${bucket}`;
+  const bindingName = `R2_${bucket.toUpperCase().replace(/-/g, '_')}`;
+
+  console.log(`\n▸ Creating R2 bucket "${fullName}"...`);
+  const r = spawnSync('npx', ['wrangler', 'r2', 'bucket', 'create', fullName], {
+    cwd: LAB_ROOT,
+    stdio: 'inherit',
+  });
+  if (r.status !== 0) {
+    console.error(`\nwrangler r2 bucket create failed. Common causes:`);
+    console.error(`  - A bucket named "${fullName}" already exists in this account`);
+    console.error(`  - Your Cloudflare plan doesn't include R2 (it's free up to 10 GB)`);
+    process.exit(1);
+  }
+
+  console.log(`
+✓ Bucket "${fullName}" is ready.
+
+To bind it to a fullstack app, paste this block into apps/<app-slug>/wrangler.jsonc
+(at the top level, alongside d1_databases / vars):
+
+  "r2_buckets": [
+    {
+      "binding": "${bindingName}",
+      "bucket_name": "${fullName}"
+    }
+  ]
+
+Then in your Worker code you'll have \`env.${bindingName}\` (typed as R2Bucket) — use
+\`env.${bindingName}.put(key, body)\` / \`env.${bindingName}.get(key)\` / etc.
+Reference: https://developers.cloudflare.com/r2/api/workers/workers-api-usage/
+
+If the assets are public (images / fonts / videos served unauthenticated), enable
+public access on the bucket in the Cloudflare dashboard:
+  Storage → R2 → ${fullName} → Settings → Public access → Allow
+Then reference assets via the public r2.dev URL or your own custom domain.
+
+To remove later:
+  npx wrangler r2 bucket delete ${fullName}
+(This is irreversible — bucket contents are lost. There is no \`pnpm scaffold rm\` shortcut for R2 yet.)
+`);
 }
 
 // ────────── Helpers ──────────

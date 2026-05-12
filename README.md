@@ -175,6 +175,14 @@ pnpm scaffold rm <slug> --yes     # skip the prompt
 
 Removes the local files, the Cloudflare Worker + D1 (for fullstack), and rebuilds + redeploys the root Worker so the service binding / asset goes away. D1 deletion is irreversible — back up first if the data matters.
 
+**Add an R2 bucket** (for large images / fonts / videos that shouldn't live in git)
+
+```bash
+pnpm scaffold r2 <bucket>
+# creates Cloudflare R2 bucket `<lab>-<bucket>`, prints the binding block
+# to paste into any app's wrangler.jsonc that needs it
+```
+
 `design-patterns.md` is the shared aesthetic vocabulary — consult it before writing UI for a new app so you (or your agent) don't default to the bland AI-SaaS look.
 
 ---

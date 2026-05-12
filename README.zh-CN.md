@@ -175,6 +175,14 @@ pnpm scaffold rm <slug> --yes     # 跳过确认
 
 会删除本地文件、Cloudflare Worker + D1（全栈），并自动 rebuild + 重部 root Worker 让 service binding / 资源同步消失。D1 删除不可恢复 —— 数据重要的话先备份。
 
+**加 R2 bucket**（放不该进 git 的大图、字体、视频）
+
+```bash
+pnpm scaffold r2 <bucket>
+# 建 Cloudflare R2 bucket `<lab>-<bucket>`，打印 binding 配置片段
+# 让你贴到需要它的 app 的 wrangler.jsonc 里
+```
+
 `design-patterns.md` 是 agent 和你共享的审美词汇表 —— 给新应用写 UI 前先翻一下，避免落入 AI 默认的"SaaS 极简"那种平庸。
 
 ---
