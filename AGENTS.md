@@ -17,13 +17,17 @@ All URLs sit under one lab domain (`https://<lab>.<your-domain>` or `https://<la
 - **With a custom domain**, Cloudflare Workers Routes (declared in each fullstack app's `wrangler.jsonc`) intercept `<lab>/apps/<slug>/*` before the request hits the root Worker.
 - **Without** (on workers.dev), the root Worker uses **Service Bindings** to dispatch `/apps/<slug>/*` to the per-app Worker. `scripts/build-lab.mjs` injects these bindings into `server/wrangler.generated.jsonc` based on which fullstack apps it discovers, and the root Worker requires `assets.run_worker_first: true` so Worker code runs before the Static Assets SPA fallback (otherwise HTML navigations would 200 the lab landing for any unbound path).
 
-## Decision: which kind do I build?
+## Decision: which kind to build?
 
-When the user asks for "做个页面 / a page" → **HTML page**.
-When the user asks for "做个应用 / app / 小工具" with no mention of saving data, login, or other users → **static React app**.
-When the user mentions login, accounts, sign up, database, "save to my account", or "see other users" → **full-stack app**.
+| Want | Build |
+|---|---|
+| A single readable page (essay, invitation, recap, notes) | **HTML page** — `pnpm scaffold page <slug>` |
+| A small interactive tool you alone use (timer, calculator, viewer) | **Static React app** — `pnpm scaffold app <slug>` |
+| Login, save-to-account, multi-device, anything that needs a database | **Full-stack app** — `pnpm scaffold app <slug> --fullstack --deploy` |
 
-If unsure, start with HTML or static. Upgrading later is a copy-folder, but going simpler is easier than going more complex.
+If unsure: start with HTML or static. Upgrading later is a copy-folder, but going simpler is easier than going more complex.
+
+(Agents helping a user: the user's words map onto these. "做个页面 / a page" → HTML; "做个应用 / 小工具" without persistence → static; mentions of login / accounts / sign up / database / save-to-my-account / see-other-users → fullstack.)
 
 ---
 

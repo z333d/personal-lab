@@ -53,6 +53,8 @@ If a request genuinely doesn't fit any of the seven — say so to the user, prop
 
 > Single-column, serif-led, paper-warm — built for sustained reading.
 
+**Starter file** — copy `pages/essay.html` and rewrite the content; the typography is wired.
+
 **When to reach for it** — Long-form articles, monthly reviews, finished essays, book notes. The page exists for reading, not for navigating or interacting.
 
 **Mood words** — Thoughtful, calm, considered, literary, slow.
@@ -81,6 +83,8 @@ If a request genuinely doesn't fit any of the seven — say so to the user, prop
 ## 2. Sketchnote
 
 > A scanned-in personal notebook page that lives as a website.
+
+**Starter file** — copy `pages/sketchnote.html`; the washi-tape / handwriting fonts / ±rotations are already wired.
 
 **When to reach for it** — When the page *is* a document of someone's thinking. Research notes, project retrospectives, trip recaps, "I read this book" pages — anything where authenticity matters more than polish.
 
@@ -111,6 +115,8 @@ If a request genuinely doesn't fit any of the seven — say so to the user, prop
 
 > A printed card you'd send by mail, rendered for the web.
 
+**Starter file** — copy `pages/postcard.html`; rewrite the body copy for your occasion. Stamp + flourish + signature are placeholders to adapt.
+
 **When to reach for it** — Special-occasion pages: birthday surprises, anniversaries, invitations, thank-yous, "I made this page just for you" gifts. The page is itself an object of care.
 
 **Mood words** — Warm, sentimental, occasional, deliberate, nostalgic.
@@ -140,6 +146,8 @@ If a request genuinely doesn't fit any of the seven — say so to the user, prop
 ## 4. Notebook
 
 > A well-made stationery item — calm, daily, comfortable.
+
+**Starter file** — copy `apps/todo/DESIGN.md` into your new app's `DESIGN.md` and adjust `name` / `description`; the palette + serif headings are tuned for this register. The whole `apps/todo/` is a working Notebook reference.
 
 **When to reach for it** — Personal tools you actually use every day. Todo lists, habit trackers, mood logs, reading lists, drinking-water reminders, quick-capture pages. The page should disappear into your routine, not demand attention.
 
@@ -172,6 +180,8 @@ If a request genuinely doesn't fit any of the seven — say so to the user, prop
 
 > Mono everywhere, keyboard-first, density over decoration.
 
+**Starter file** — copy `apps/counter/DESIGN.md` into your new app's `DESIGN.md` and adjust `name` / `description`; the mono stack + dark palette are wired. `apps/counter/` itself is a working Terminal-style static app.
+
 **When to reach for it** — Developer tools, internal dashboards, command palettes, data viewers, anything where speed and density beat visual delight. The user is a power user; the page respects their time by getting out of the way.
 
 **Mood words** — Precise, dense, professional, efficient, "I don't need to entertain you".
@@ -202,6 +212,8 @@ If a request genuinely doesn't fit any of the seven — say so to the user, prop
 
 > Huge condensed display + full-bleed color blocks — one thesis per screen.
 
+**Starter file** — copy `pages/manifesto.html`; rewrite each section's label + headline + body for your own theses. The color cadence between sections (cream → red → yellow → black → blue) is the load-bearing part — swap colors deliberately.
+
 **When to reach for it** — About pages, launch pages, principle statements, hiring pages, single-page arguments. The page exists to *take a position* and have the visual carry the conviction.
 
 **Mood words** — Confident, opinionated, ambitious, hot, urgent.
@@ -231,6 +243,8 @@ If a request genuinely doesn't fit any of the seven — say so to the user, prop
 ## 7. Neo-Memphis Playful
 
 > Cream + saturated panels + tape/stickers + chunky type — friendly product personality.
+
+**Starter file** — copy `pages/playful.html`; rewrite the hero copy, feature cards, and pricing block for your own product. Keep the chunky borders + offset shadows; swap the palette only if you keep the same saturation level.
 
 **When to reach for it** — Product landing pages, pricing pages, feature intros, small tools with personality. The page is selling something but doing it warmly, with opinions and humor.
 

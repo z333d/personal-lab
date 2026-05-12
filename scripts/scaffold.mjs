@@ -62,7 +62,7 @@ if (!/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) {
 const wantsDeploy = flags.has('--deploy');
 
 if (kind === 'rm') {
-  await removeBySlug(slug, flags.has('--yes'));
+  await removeBySlug(slug, flags.has('--yes'), flags.has('--force'));
   process.exit(0);
 }
 
@@ -349,7 +349,7 @@ function deployFullstackApp(slug) {
 
 // ────────── rm helpers ──────────
 
-async function removeBySlug(slug, skipPrompt) {
+async function removeBySlug(slug, skipPrompt, force) {
   const pagePath = path.join(LAB_ROOT, 'pages', `${slug}.html`);
   const appDir = path.join(LAB_ROOT, 'apps', slug);
   const isPage = fs.existsSync(pagePath);
@@ -357,6 +357,17 @@ async function removeBySlug(slug, skipPrompt) {
 
   if (!isPage && !isApp) {
     console.error(`Nothing to remove: no pages/${slug}.html or apps/${slug}/.`);
+    process.exit(1);
+  }
+
+  // Guard the showcase apps that scaffold copies from. Removing them quietly
+  // breaks future `pnpm scaffold app <new-slug>` invocations.
+  if (isApp && (slug === 'todo' || slug === 'counter') && !force) {
+    const sourceOf = slug === 'todo' ? 'fullstack apps (--fullstack)' : 'static apps';
+    console.error(`apps/${slug}/ is the source template that \`pnpm scaffold app <new-slug>\``);
+    console.error(`copies from when creating new ${sourceOf}. Removing it now will break`);
+    console.error(`future scaffolds. Either keep it, or pass --force to delete anyway`);
+    console.error(`(in which case bring your own apps/${slug}/ before the next scaffold).`);
     process.exit(1);
   }
 
@@ -671,16 +682,34 @@ function writeNeutralSchema(targetDir) {
   fs.writeFileSync(target, `/**
  * Drizzle schema for this app's D1 database.
  *
- * The placeholder schema is auth-only. When you add business tables,
- * append them here and re-export them under \`schema\`, then run
- * \`pnpm db:generate\` (inside the app) to produce a fresh migration.
+ * Ships auth-only. To add a business table, uncomment the example below
+ * (or write your own), append it to the \`schema\` export, then run:
+ *
+ *   pnpm db:generate --name <short-description>   # produces a new migration
+ *   pnpm deploy:all                               # applies it on deploy
+ *
+ * The userId / FK pattern below is the canonical "rows belong to a user"
+ * shape — Better Auth populates the user table; FK + ON DELETE cascade
+ * means deleting a user wipes their rows automatically.
  */
+// import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { authSchema } from '@lab/lib/auth-schema';
 
 export const { user, session, account, verification } = authSchema;
 
-// REQUIRED: build script and runtime expect this exact name.
-export const schema = { user, session, account, verification };
+// Example — uncomment and adapt to your domain:
+//
+// export const items = sqliteTable('items', {
+//   id: text('id').primaryKey(),
+//   userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+//   title: text('title').notNull(),
+//   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+// });
+
+// REQUIRED: build script and runtime expect this exact name (singular).
+// Add any business tables you define above into this object so Drizzle's
+// query helpers see them.
+export const schema = { user, session, account, verification /*, items */ };
 `);
 }
 
