@@ -130,11 +130,16 @@ npx wrangler d1 create <lab-name>-<slug>
 cd apps/<slug>
 npx wrangler d1 execute <lab-name>-<slug> --remote --file drizzle/migrations/0000_init.sql
 
-# 3. 设两个 secrets
+# 3. 设两个生产环境 secrets
 echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
 echo -n "https://<lab-name>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL
 
-# 4. 部署
+# 4. （可选）配 .dev.vars 让 `pnpm dev` 本地也能跑 auth
+cp .dev.vars.example .dev.vars
+# 编辑 .dev.vars：填一个随机的 BETTER_AUTH_SECRET（本地用，随便一个值）
+# BETTER_AUTH_URL=http://localhost:8787 wrangler dev 默认就这个端口
+
+# 5. 部署
 cd ../..
 pnpm build && pnpm deploy:all
 # 上线在 /apps/<slug>/

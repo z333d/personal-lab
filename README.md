@@ -130,11 +130,16 @@ npx wrangler d1 create <lab-name>-<slug>
 cd apps/<slug>
 npx wrangler d1 execute <lab-name>-<slug> --remote --file drizzle/migrations/0000_init.sql
 
-# 3. set the two secrets
+# 3. set the two production secrets
 echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
 echo -n "https://<lab-name>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL
 
-# 4. deploy
+# 4. (optional) set up .dev.vars so `pnpm dev` works locally
+cp .dev.vars.example .dev.vars
+# edit .dev.vars: paste a random BETTER_AUTH_SECRET (any value, just for local)
+# BETTER_AUTH_URL=http://localhost:8787 is fine for wrangler dev
+
+# 5. deploy
 cd ../..
 pnpm build && pnpm deploy:all
 # live at /apps/<slug>/

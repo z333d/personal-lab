@@ -1,0 +1,13 @@
+# Copy this file to .dev.vars (next to wrangler.jsonc) and fill in real values.
+# .dev.vars is gitignored; wrangler dev loads it as the local secret bindings,
+# matching what `wrangler secret put` sets in production.
+
+# Random secret for Better Auth session signing. Generate one with:
+#   openssl rand -base64 36
+BETTER_AUTH_SECRET=
+
+# Origin where this Worker is reachable in dev. `wrangler dev` listens on
+# port 8787 by default, so the full origin for the dev sign-in URL is
+# http://localhost:8787 — the auth library composes the per-app path
+# (/apps/<slug>/api/auth) from APP_BASE_PATH in wrangler.jsonc.
+BETTER_AUTH_URL=http://localhost:8787

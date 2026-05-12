@@ -134,12 +134,14 @@ console.log(`  Brand surfaces neutralized — DESIGN.md is a placeholder.`);
 console.log(`  Before building UI, ask the user what vibe (editorial / playful / utilitarian / dark / etc.)`);
 console.log(`  and rewrite DESIGN.md, then \`pnpm theme:gen\` to refresh tokens.`);
 if (fullstack) {
-  console.log(`\nFullstack apps need a per-app D1 database before they can deploy.`);
-  console.log(`Run from the lab root:`);
+  console.log(`\nFullstack apps need a per-app D1 + secrets before they can deploy. From the lab root:`);
   console.log(`  npx wrangler d1 create <lab>-${slug}`);
-  console.log(`  → copy the returned database_id into apps/${slug}/wrangler.jsonc`);
-  console.log(`  → then \`pnpm build && pnpm deploy:all\` to deploy + bind the route.`);
-  console.log(`  (BETTER_AUTH_SECRET / BETTER_AUTH_URL secrets are set via \`wrangler secret put\`.)`);
+  console.log(`  → paste the returned database_id into apps/${slug}/wrangler.jsonc`);
+  console.log(`  cd apps/${slug} && npx wrangler d1 execute <lab>-${slug} --remote --file drizzle/migrations/0000_init.sql`);
+  console.log(`  echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET`);
+  console.log(`  echo -n "https://<lab>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL`);
+  console.log(`  cp .dev.vars.example .dev.vars  # optional; needed only for \`pnpm dev\` local auth`);
+  console.log(`  cd ../.. && pnpm build && pnpm deploy:all`);
 } else {
   console.log(`\nNext: edit apps/${slug}/src/App.tsx, then \`git push\` (or \`pnpm deploy:all\`) to deploy.`);
 }

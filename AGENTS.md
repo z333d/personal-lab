@@ -111,12 +111,19 @@ npx wrangler d1 execute <lab>-<slug> --remote --file drizzle/migrations/0000_ini
 echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
 echo -n "https://<lab>.<your-domain-or-workers.dev>" | npx wrangler secret put BETTER_AUTH_URL
 
-# 4. deploy
+# 4. (optional) set up local-dev secrets so `pnpm dev` can auth
+cp .dev.vars.example .dev.vars
+# edit the new .dev.vars: paste a random BETTER_AUTH_SECRET
+# (e.g. `openssl rand -base64 36`); BETTER_AUTH_URL=http://localhost:8787 is fine
+
+# 5. deploy
 cd ../..
 pnpm build && pnpm deploy:all
 ```
 
 `pnpm deploy:all` refuses to deploy a fullstack app whose `wrangler.jsonc` still contains the D1 placeholder, so step 1 must be done first. `pnpm build` excludes "pending" apps (placeholder D1) from service bindings + landing automatically — so re-running `pnpm deploy:root` after a scaffold (without provisioning D1) is safe and just leaves the new app dark.
+
+Step 4 (`.dev.vars`) is only needed when you want to run the app locally via `pnpm dev` (or `wrangler dev` inside the app folder). Without it, `wrangler dev` boots fine but Better Auth fails because `BETTER_AUTH_SECRET` is undefined. `.dev.vars` is `.gitignore`d; only `.dev.vars.example` is tracked.
 
 The original `apps/todo/` and `apps/counter/` showcase apps are wired by `scripts/create-lab.mjs` at lab-creation time — those steps run once and you never need to repeat them for the initial pair.
 
