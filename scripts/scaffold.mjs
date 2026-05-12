@@ -137,13 +137,22 @@ if (fullstack) {
   // is a clean blank canvas the user can extend.
   writeNeutralServerIndex(targetDir, slug);
   writeNeutralSchema(targetDir);
-  writeNeutralMigration(targetDir);
+  clearCopiedMigrations(targetDir);
   resetD1IdPlaceholder(targetDir, slug);
 }
 
 // Wire the new workspace into the lab's node_modules (fresh apps need their
 // own vite/react/etc. installed via the workspace; without this `pnpm build`
 // fails on the next run).
+//
+// pnpm 10 caches workspace state at node_modules/.pnpm-workspace-state.json.
+// A plain `pnpm install` after we drop a new apps/<slug>/ on disk says
+// "Already up to date" and refuses to create apps/<slug>/node_modules —
+// even though the new package is recognized in pnpm-workspace.yaml.
+// Removing the cache file forces pnpm to re-validate and create the symlinks.
+const workspaceState = path.join(LAB_ROOT, 'node_modules', '.pnpm-workspace-state.json');
+if (fs.existsSync(workspaceState)) fs.unlinkSync(workspaceState);
+
 console.log(`Installing workspace dependencies...`);
 const installRes = spawnSync('pnpm', ['install'], { cwd: LAB_ROOT, stdio: 'inherit' });
 if (installRes.status !== 0) {
@@ -159,6 +168,22 @@ const themeRes = spawnSync('pnpm', ['--filter', `@lab/${slug}`, 'theme:gen'], {
 });
 if (themeRes.status !== 0) {
   console.warn(`  (theme:gen failed — run \`pnpm --filter @lab/${slug} theme:gen\` manually)`);
+}
+
+if (fullstack) {
+  // Let drizzle-kit produce the initial migration so the meta journal +
+  // snapshot match the .sql on disk. Without this, a later `pnpm db:generate`
+  // (after the user adds business tables) would re-baseline as 0000_<random>
+  // alongside our hand-written 0000_init.sql, and `deploy:all` would try to
+  // apply both → "table already exists" on the second one.
+  console.log(`Generating initial drizzle migration...`);
+  const genRes = spawnSync('pnpm', ['--filter', `@lab/${slug}`, 'db:generate', '--name', 'init'], {
+    cwd: LAB_ROOT,
+    stdio: 'inherit',
+  });
+  if (genRes.status !== 0) {
+    console.warn(`  (db:generate failed — run \`pnpm --filter @lab/${slug} db:generate --name init\` manually)`);
+  }
 }
 
 console.log(`✓ Created apps/${slug}/`);
@@ -659,65 +684,19 @@ export const schema = { user, session, account, verification };
 `);
 }
 
-function writeNeutralMigration(targetDir) {
+function clearCopiedMigrations(targetDir) {
+  // Wipe whatever was copied from the source app's drizzle/migrations/.
+  // We do NOT hand-write a replacement 0000_init.sql here; instead, after
+  // `pnpm install`, the scaffold script runs `drizzle-kit generate --name init`
+  // so the .sql, _journal.json, and 0000_snapshot.json are all produced
+  // together and stay consistent with each other. That keeps future
+  // `pnpm db:generate` invocations incremental (producing 0001_*.sql for
+  // newly added tables) instead of re-baselining from scratch.
   const migDir = path.join(targetDir, 'drizzle', 'migrations');
   if (!fs.existsSync(migDir)) return;
-  // Wipe whatever was copied from the source app and write a single auth-only
-  // migration. The user can extend it via \`pnpm db:generate\` once they add
-  // business tables.
   for (const entry of fs.readdirSync(migDir, { withFileTypes: true })) {
     fs.rmSync(path.join(migDir, entry.name), { recursive: true, force: true });
   }
-  fs.writeFileSync(path.join(migDir, '0000_init.sql'), `CREATE TABLE \`user\` (
-\t\`id\` text PRIMARY KEY NOT NULL,
-\t\`name\` text NOT NULL,
-\t\`email\` text NOT NULL,
-\t\`email_verified\` integer DEFAULT false NOT NULL,
-\t\`image\` text,
-\t\`created_at\` integer NOT NULL,
-\t\`updated_at\` integer NOT NULL
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX \`user_email_unique\` ON \`user\` (\`email\`);--> statement-breakpoint
-CREATE TABLE \`session\` (
-\t\`id\` text PRIMARY KEY NOT NULL,
-\t\`user_id\` text NOT NULL,
-\t\`token\` text NOT NULL,
-\t\`expires_at\` integer NOT NULL,
-\t\`ip_address\` text,
-\t\`user_agent\` text,
-\t\`created_at\` integer NOT NULL,
-\t\`updated_at\` integer NOT NULL,
-\tFOREIGN KEY (\`user_id\`) REFERENCES \`user\`(\`id\`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX \`session_token_unique\` ON \`session\` (\`token\`);--> statement-breakpoint
-CREATE TABLE \`account\` (
-\t\`id\` text PRIMARY KEY NOT NULL,
-\t\`user_id\` text NOT NULL,
-\t\`account_id\` text NOT NULL,
-\t\`provider_id\` text NOT NULL,
-\t\`access_token\` text,
-\t\`refresh_token\` text,
-\t\`id_token\` text,
-\t\`access_token_expires_at\` integer,
-\t\`refresh_token_expires_at\` integer,
-\t\`scope\` text,
-\t\`password\` text,
-\t\`created_at\` integer NOT NULL,
-\t\`updated_at\` integer NOT NULL,
-\tFOREIGN KEY (\`user_id\`) REFERENCES \`user\`(\`id\`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE \`verification\` (
-\t\`id\` text PRIMARY KEY NOT NULL,
-\t\`identifier\` text NOT NULL,
-\t\`value\` text NOT NULL,
-\t\`expires_at\` integer NOT NULL,
-\t\`created_at\` integer NOT NULL,
-\t\`updated_at\` integer NOT NULL
-);
-`);
 }
 
 function resetD1IdPlaceholder(targetDir, slug) {
