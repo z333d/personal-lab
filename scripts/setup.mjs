@@ -21,8 +21,38 @@ const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
 // legacy config path so existing users don't need to re-run setup.
 const LEGACY_CONFIG_PATH = path.join(os.homedir(), '.config', 'create-pages-site', 'config.json');
 
-const rl = readline.createInterface({ input, output });
-const ask = (q, def) => rl.question(def !== undefined && def !== '' ? `${q} [${def}]: ` : `${q}: `).then((a) => a.trim() || def || '');
+// stdin handling has two modes:
+//   - interactive (TTY): readline.question, one prompt at a time
+//   - piped/redirected (e.g. `printf 'a\nb\n' | node setup.mjs`): readline.question
+//     has a documented foot-gun where the second .question() never resolves after
+//     intermediate spawnSync calls. So in pipe mode we slurp stdin upfront and
+//     hand out lines in order. Same UX from the user's side; works in CI / tests.
+const isInteractive = input.isTTY;
+const rl = isInteractive ? readline.createInterface({ input, output }) : null;
+
+let pipedLines = null;
+let pipedIdx = 0;
+if (!isInteractive) {
+  pipedLines = await new Promise((resolve, reject) => {
+    const chunks = [];
+    input.on('data', (c) => chunks.push(c));
+    input.on('end', () => resolve(Buffer.concat(chunks).toString('utf8').split('\n')));
+    input.on('error', reject);
+  });
+}
+
+async function ask(q, def) {
+  const prompt = def !== undefined && def !== '' ? `${q} [${def}]: ` : `${q}: `;
+  if (isInteractive) {
+    const a = await rl.question(prompt);
+    return a.trim() || def || '';
+  }
+  // pipe mode: echo the prompt for visibility, consume one line
+  output.write(prompt);
+  const a = (pipedLines[pipedIdx++] ?? '').trim();
+  output.write(a + '\n');
+  return a || def || '';
+}
 
 function ok(msg) { console.log(`  \x1b[32m✓\x1b[0m ${msg}`); }
 function step(msg) { console.log(`\n\x1b[36m▸ ${msg}\x1b[0m`); }
@@ -59,8 +89,10 @@ if (wrCheck.status !== 0 || !wrOut.includes('@')) {
   process.exit(1);
 }
 // Extract email + account ID
-const emailMatch = wrOut.match(/You are logged in[^\n]*?with the email\s+([^\s]+?)\.?(?=[\s,.\n]|$)/i);
-const email = emailMatch ? emailMatch[1] : '(unknown)';
+const emailMatch = wrOut.match(/You are logged in[^\n]*?with the email\s+(\S+)/i);
+// wrangler whoami output sometimes ends the email with a trailing period
+// ("…the email foo@bar.com."); strip it.
+const email = emailMatch ? emailMatch[1].replace(/\.$/, '') : '(unknown)';
 ok(`wrangler logged in as ${email}`);
 
 // List zones using wrangler — alas wrangler doesn't have a "list zones" command,
@@ -105,4 +137,4 @@ console.log('');
 console.log('Next: ask the assistant — "建个 lab 叫 my-test-lab"');
 console.log('     or run: node ' + path.basename(import.meta.url.replace(/setup\.mjs$/, 'create-lab.mjs')) + ' my-test-lab');
 
-rl.close();
+rl?.close();
