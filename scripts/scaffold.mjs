@@ -36,6 +36,8 @@ if (!kind || !slug) {
   node scripts/scaffold.mjs page <slug>                   # HTML page
   node scripts/scaffold.mjs app  <slug>                   # static React app
   node scripts/scaffold.mjs app  <slug> --fullstack       # fullstack app
+  node scripts/scaffold.mjs app  <slug> --fullstack --deploy   # one-command create
+  node scripts/scaffold.mjs rm   <slug> [--yes]           # remove a page / app (destructive)
 `);
   process.exit(1);
 }
@@ -46,6 +48,11 @@ if (!/^[a-z][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)) {
 }
 
 const wantsDeploy = flags.has('--deploy');
+
+if (kind === 'rm') {
+  await removeBySlug(slug, flags.has('--yes'));
+  process.exit(0);
+}
 
 if (kind === 'page') {
   const target = path.join(LAB_ROOT, 'pages', `${slug}.html`);
@@ -301,6 +308,92 @@ function deployFullstackApp(slug) {
   run('pnpm', ['deploy:all'], { cwd: LAB_ROOT });
 
   console.log(`\n✨ ${slug} is live at ${labBaseUrl}/apps/${slug}/`);
+}
+
+// ────────── rm helpers ──────────
+
+async function removeBySlug(slug, skipPrompt) {
+  const pagePath = path.join(LAB_ROOT, 'pages', `${slug}.html`);
+  const appDir = path.join(LAB_ROOT, 'apps', slug);
+  const isPage = fs.existsSync(pagePath);
+  const isApp = fs.existsSync(appDir);
+
+  if (!isPage && !isApp) {
+    console.error(`Nothing to remove: no pages/${slug}.html or apps/${slug}/.`);
+    process.exit(1);
+  }
+
+  let isFullstack = false;
+  if (isApp) {
+    const pkgPath = path.join(appDir, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      isFullstack = !!pkg.lab?.fullstack;
+    }
+  }
+
+  // Describe what will go
+  const targets = [];
+  if (isPage) targets.push(`pages/${slug}.html`);
+  if (isApp) targets.push(`apps/${slug}/`);
+  if (isFullstack) {
+    const labName = readLabName();
+    targets.push(`Cloudflare Worker "${labName}-${slug}"`);
+    targets.push(`Cloudflare D1 database "${labName}-${slug}" (and all its data)`);
+  }
+
+  console.log(`\nAbout to remove:`);
+  for (const t of targets) console.log(`  - ${t}`);
+  console.log(``);
+  if (isFullstack) {
+    console.log(`\x1b[33mThe D1 deletion is irreversible.\x1b[0m`);
+  }
+
+  if (!skipPrompt) {
+    const ok = await promptYesNo(`Continue? (y/N) `);
+    if (!ok) {
+      console.log(`Cancelled.`);
+      process.exit(0);
+    }
+  }
+
+  if (isFullstack) {
+    const labName = readLabName();
+    console.log(`\n▸ Delete Worker ${labName}-${slug}`);
+    spawnSync('npx', ['wrangler', 'delete', '--name', `${labName}-${slug}`, '--force'], { stdio: 'inherit' });
+    // wrangler delete returns non-zero if the worker doesn't exist — that's fine; carry on.
+
+    console.log(`\n▸ Delete D1 ${labName}-${slug}`);
+    spawnSync('npx', ['wrangler', 'd1', 'delete', `${labName}-${slug}`, '--skip-confirmation'], { stdio: 'inherit' });
+  }
+
+  if (isPage) {
+    fs.unlinkSync(pagePath);
+    console.log(`\n✓ Removed pages/${slug}.html`);
+  }
+  if (isApp) {
+    fs.rmSync(appDir, { recursive: true, force: true });
+    console.log(`✓ Removed apps/${slug}/`);
+  }
+
+  // Rebuild + redeploy root so the service binding (if any) and the static
+  // assets disappear from production. pnpm install isn't needed — pnpm picks
+  // up the workspace change next time anyway.
+  console.log(`\n▸ Rebuild + redeploy root Worker`);
+  run('pnpm', ['build'], { cwd: LAB_ROOT });
+  run('pnpm', ['deploy:root'], { cwd: LAB_ROOT });
+  console.log(`\n✓ ${slug} is gone.`);
+}
+
+async function promptYesNo(question) {
+  const { default: readline } = await import('node:readline/promises');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (await rl.question(question)).trim().toLowerCase();
+    return answer === 'y' || answer === 'yes';
+  } finally {
+    rl.close();
+  }
 }
 
 // ────────── Helpers ──────────

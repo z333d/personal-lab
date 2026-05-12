@@ -166,6 +166,15 @@ pnpm deploy:root                  # root Worker only (pages + static apps + land
 pnpm deploy:all                   # everything (root + each fullstack Worker)
 ```
 
+**Remove a page or app**
+
+```bash
+pnpm scaffold rm <slug>           # auto-detects kind, prompts before CF deletes
+pnpm scaffold rm <slug> --yes     # skip the prompt
+```
+
+Removes the local files, the Cloudflare Worker + D1 (for fullstack), and rebuilds + redeploys the root Worker so the service binding / asset goes away. D1 deletion is irreversible — back up first if the data matters.
+
 `design-patterns.md` is the shared aesthetic vocabulary — consult it before writing UI for a new app so you (or your agent) don't default to the bland AI-SaaS look.
 
 ---

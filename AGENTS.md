@@ -98,6 +98,8 @@ apps/<slug>/
 
 **The easy path** — `pnpm scaffold app <slug> --fullstack --deploy` does everything in one command: scaffolds the folder, provisions a new D1, applies the auth-only initial migration, sets BETTER_AUTH_SECRET / BETTER_AUTH_URL on Cloudflare, writes a local `.dev.vars` with a *separate* dev secret, then `pnpm build && pnpm deploy:all`. Re-running is safe (D1 lookups + migration applies + secret puts are all idempotent). Use this unless you specifically need to inspect intermediate state.
 
+To remove an app or page later, `pnpm scaffold rm <slug>` auto-detects what kind it is and tears down the right things: a page is just an `unlink`, a static app is `rm -rf`, a fullstack app additionally deletes its Worker and D1 database. The command prompts before destructive Cloudflare ops; pass `--yes` to skip the prompt. It rebuilds + redeploys the root Worker at the end so the service binding (if any) and the static asset both disappear from production in one step.
+
 **The manual path** — `pnpm scaffold app <slug> --fullstack` writes the folder + pnpm-installs, but does **not** touch Cloudflare. Before the new app can be reached, you (or the agent) must:
 
 ```bash

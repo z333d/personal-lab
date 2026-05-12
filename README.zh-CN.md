@@ -166,6 +166,15 @@ pnpm deploy:root                  # 只重部 root Worker（页面 + 静态 app 
 pnpm deploy:all                   # 全量（root + 每个全栈 Worker）
 ```
 
+**删除一个 page 或 app**
+
+```bash
+pnpm scaffold rm <slug>           # 自动识别类型，destructive 操作前会确认
+pnpm scaffold rm <slug> --yes     # 跳过确认
+```
+
+会删除本地文件、Cloudflare Worker + D1（全栈），并自动 rebuild + 重部 root Worker 让 service binding / 资源同步消失。D1 删除不可恢复 —— 数据重要的话先备份。
+
 `design-patterns.md` 是 agent 和你共享的审美词汇表 —— 给新应用写 UI 前先翻一下，避免落入 AI 默认的"SaaS 极简"那种平庸。
 
 ---
