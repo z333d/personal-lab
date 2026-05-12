@@ -128,7 +128,9 @@ npx wrangler d1 create <lab-name>-<slug>
 
 # 2. apply the auth-only initial migration
 cd apps/<slug>
-npx wrangler d1 execute <lab-name>-<slug> --remote --file drizzle/migrations/0000_init.sql
+pnpm db:migrate:remote
+# (idempotent — re-running is safe; subsequent `pnpm db:generate`
+# + `pnpm deploy:all` automatically applies new migrations.)
 
 # 3. set the two production secrets
 echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET

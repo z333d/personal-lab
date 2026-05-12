@@ -9,8 +9,8 @@
     "dev": "pnpm theme:gen && wrangler dev",
     "deploy": "pnpm build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 execute todo-local --file=drizzle/migrations/latest.sql",
-    "db:migrate:remote": "wrangler d1 migrations apply todo --remote"
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
     "@lab/lib": "workspace:*",

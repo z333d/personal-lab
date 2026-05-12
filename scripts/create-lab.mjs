@@ -204,17 +204,17 @@ if (skipDeploy) {
   }
 
   // ────────── 5. Run migrations ──────────
+  // Use `wrangler d1 migrations apply` (not `wrangler d1 execute --file`) so a
+  // d1_migrations bookkeeping table is created inside the database; subsequent
+  // deploys run the same command and re-apply only NEW migrations.
   for (const app of fullstackApps) {
     step(`Apply migrations for ${app.slug}`);
     const migDir = path.join(app.dir, 'drizzle', 'migrations');
-    if (!fs.existsSync(migDir)) {
-      log(`  no migrations directory for ${app.slug}, skipping`);
+    if (!fs.existsSync(migDir) || !fs.readdirSync(migDir).some((f) => f.endsWith('.sql'))) {
+      log(`  no migrations for ${app.slug}, skipping`);
       continue;
     }
-    const sqlFiles = fs.readdirSync(migDir).filter(f => f.endsWith('.sql')).sort();
-    for (const sql of sqlFiles) {
-      run('npx', ['wrangler', 'd1', 'execute', `${labName}-${app.slug}`, '--remote', '--file', path.join(migDir, sql)], { cwd: app.dir });
-    }
+    run('npx', ['wrangler', 'd1', 'migrations', 'apply', 'DB', '--remote'], { cwd: app.dir });
     ok(`migrations applied for ${app.slug}`);
   }
 

@@ -60,6 +60,14 @@ for (const app of fullstackApps) {
       `paste the returned database_id into wrangler.jsonc before deploying.`,
     );
   }
+  // Apply any pending migrations BEFORE deploying — code referencing new
+  // tables would 500 if the migration hasn't landed yet. `wrangler d1
+  // migrations apply` is idempotent: if nothing's new, it's a no-op.
+  const migDir = path.join(app.dir, 'drizzle', 'migrations');
+  if (fs.existsSync(migDir) && fs.readdirSync(migDir).some((f) => f.endsWith('.sql'))) {
+    console.log(`  apply migrations for ${app.slug}`);
+    run('npx', ['wrangler', 'd1', 'migrations', 'apply', 'DB', '--remote'], { cwd: app.dir });
+  }
   run('npx', ['wrangler', 'deploy'], { cwd: app.dir });
 }
 

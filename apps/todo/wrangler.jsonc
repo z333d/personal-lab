@@ -18,7 +18,8 @@
     {
       "binding": "DB",
       "database_name": "__LAB_NAME__-todo",
-      "database_id": "__D1_TODO_ID__"
+      "database_id": "__D1_TODO_ID__",
+      "migrations_dir": "drizzle/migrations"
     }
   ]
   // Secrets (set via `wrangler secret put`):

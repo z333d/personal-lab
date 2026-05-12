@@ -137,7 +137,7 @@ if (fullstack) {
   console.log(`\nFullstack apps need a per-app D1 + secrets before they can deploy. From the lab root:`);
   console.log(`  npx wrangler d1 create <lab>-${slug}`);
   console.log(`  → paste the returned database_id into apps/${slug}/wrangler.jsonc`);
-  console.log(`  cd apps/${slug} && npx wrangler d1 execute <lab>-${slug} --remote --file drizzle/migrations/0000_init.sql`);
+  console.log(`  cd apps/${slug} && pnpm db:migrate:remote`);
   console.log(`  echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET`);
   console.log(`  echo -n "https://<lab>.<your-domain>" | npx wrangler secret put BETTER_AUTH_URL`);
   console.log(`  cp .dev.vars.example .dev.vars  # optional; needed only for \`pnpm dev\` local auth`);

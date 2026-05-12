@@ -126,9 +126,11 @@ pnpm scaffold app <slug> --fullstack
 npx wrangler d1 create <lab-name>-<slug>
 # 把返回的 database_id 粘进 apps/<slug>/wrangler.jsonc
 
-# 2. 应用 auth-only 的初始迁移
+# 2. 应用 auth-only 初始迁移
 cd apps/<slug>
-npx wrangler d1 execute <lab-name>-<slug> --remote --file drizzle/migrations/0000_init.sql
+pnpm db:migrate:remote
+# （幂等 —— 重复跑安全；之后 `pnpm db:generate` + `pnpm deploy:all`
+# 会自动 apply 新生成的 migration）
 
 # 3. 设两个生产环境 secrets
 echo -n "$(openssl rand -base64 36)" | npx wrangler secret put BETTER_AUTH_SECRET
