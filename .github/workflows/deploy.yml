@@ -10,7 +10,16 @@ name: Deploy
 # This applies any pending D1 migrations and deploys every Worker, exactly
 # matching the local-machine workflow. See README "Day-to-day usage".
 #
-# Required secrets:
+# Template repo guard:
+#   This file ships inside the template repo (z333d/personal-lab). The
+#   template's package.json has `"name": "__LAB_NAME__"` (a placeholder
+#   that create-lab.mjs substitutes when generating a real lab). The first
+#   step below detects that placeholder and exits cleanly so CI doesn't
+#   waste time trying to build something that has unsubstituted strings
+#   in wrangler.jsonc. In a generated lab the placeholder is gone, and
+#   the deploy proceeds normally.
+#
+# Required secrets (in a real lab):
 #   CLOUDFLARE_API_TOKEN — see https://developers.cloudflare.com/workers/wrangler/ci-cd/
 #     The token needs Account.Workers Scripts Edit, Account.D1 Edit, and
 #     Account.Workers R2 Storage Edit (the last only if you use R2 buckets).
@@ -43,7 +52,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect-template:
+    runs-on: ubuntu-latest
+    outputs:
+      is_template: ${{ steps.check.outputs.is_template }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if grep -q '"__LAB_NAME__"' package.json; then
+            echo "is_template=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Template detected — skipping deploy"
+              echo ""
+              echo "\`package.json\` contains the \`__LAB_NAME__\` placeholder, which means this is the"
+              echo "template repo itself (z333d/personal-lab) rather than a generated lab."
+              echo "The deploy workflow is intended for labs created via \`create-lab.mjs\`;"
+              echo "running it against the template would fail on unsubstituted placeholders"
+              echo "in \`apps/*/wrangler.jsonc\`. Doing nothing."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "is_template=false" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
+    needs: detect-template
+    if: needs.detect-template.outputs.is_template != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -51,10 +85,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # pnpm/action-setup@v4 reads the version from package.json's
+      # `packageManager` field when no `version:` is given. Specifying it
+      # here as well caused a "Multiple versions of pnpm specified" error.
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Install Node
         uses: actions/setup-node@v4
